@@ -1,0 +1,36 @@
+{
+	"root": true,
+	"name": "File.%sea%%epi%%ext%",
+	"exts": [
+		"mp4",
+		"avi",
+		"mkv"
+	],
+	"vars": {
+		"%sea%": {
+			"type": "int",
+			"format": "S%02d",
+			"default": 0
+		},
+		"%epi%": {
+			"type": "int",
+			"format": "E%02d",
+			"default": 0,
+			"fns": [
+				{
+					"fn": "replace",
+					"search": "_",
+					"replace": " "
+				}
+			]
+		},
+		"%name%": {
+			"type": "str"
+		}
+	},
+	"find": {
+		"S(\\d{1,2}).?E(\\d{1,3})": ["%sea%", "%epi%"],
+		"(\\d{1,2})x(\\d{1,3})": ["%sea%", "%epi%"]
+	},
+	"errors": false
+}
