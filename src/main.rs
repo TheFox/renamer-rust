@@ -15,7 +15,7 @@ fn print_app_info() {
 
 fn print_usage() {
     println!("Usage:");
-    println!("  renamer [-h] [--config <path>] [[--path <path>]...] [--limit <count>] [-n|--dryrun] [--print]");
+    println!("  renamer [-h] [-c|--config <path>] [[-p|--path <path>]...] [-l|--limit <count>] [-n|--dryrun] [--print]");
     println!();
     println!("Options:");
     println!("  -h|--help                Show help.");

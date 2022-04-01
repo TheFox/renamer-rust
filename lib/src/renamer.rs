@@ -54,8 +54,9 @@ impl Renamer {
                                         println!("-> file: {:?} {:?}", _path, _entry);
                                         match _entry.metadata() {
                                             Ok(_metadata) => {
-                                                println!("-> metadata: {:?}", _metadata);
-                                                // println!("-> is file: {:?}", _metadata.is_file());
+                                                // println!("-> metadata: {:?}", _metadata);
+                                                println!("-> is file: {:?}", _metadata.is_file());
+                                                println!("-> file_type: {:?}", _metadata.file_type());
 
                                                 if _metadata.is_dir() {
                                                     let _spaths = Some(vec![_entry.path().display().to_string()]);
