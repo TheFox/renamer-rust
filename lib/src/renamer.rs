@@ -32,7 +32,7 @@ impl Renamer {
 
         println!("-> paths: {:?}", paths);
 
-        let mut renamed_c: usize = 0;
+        // let mut renamed_c: usize = 0;
         let mut rest_c: usize = 0;
         if let Some(_limit) = limit {
             rest_c = _limit;
@@ -43,6 +43,7 @@ impl Renamer {
                 for _path in &_paths {
                     let _p = &String::from(_path);
                     let _p = Path::new(OsStr::new(_p));
+
                     println!("-> path: {:?}", _path);
 
                     match read_dir(_p) {

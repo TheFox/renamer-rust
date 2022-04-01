@@ -12,8 +12,14 @@ categories = ["command-line-interface", "filesystem"]
 edition = "2018"
 default-run = "renamer"
 
+[build-dependencies]
+chrono = "0.4"
+
 [dependencies]
-renamer_lib = { path = "lib" }
+
+[dependencies.renamer_lib]
+path = "lib"
+# version = "0.1"
 
 [workspace]
 members = [

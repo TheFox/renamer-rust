@@ -9,4 +9,5 @@ cd "${SCRIPT_BASEDIR}/.."
 source ./.env
 
 set -x
+
 cargo test --workspace $* -- --nocapture

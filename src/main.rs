@@ -1,21 +1,11 @@
 
+include!(concat!(env!("OUT_DIR"), "/config.rs"));
+
 use std::env::args;
 use std::io::Result;
 use renamer_lib::app::App;
 use renamer_lib::renamer::Renamer;
 
-pub const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
-pub const APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
-pub const APP_AUTHORS: &'static str = env!("CARGO_PKG_AUTHORS");
-pub const APP_HOMEPAGE: &'static str = env!("CARGO_PKG_HOMEPAGE");
-
-#[cfg(debug_assertions)]
-const APP_BUILD_AT: &'static str = "APP_BUILD_AT";
-#[cfg(not(debug_assertions))]
-#[allow(dead_code)]
-const APP_BUILD_AT: &'static str = env!("APP_BUILD_AT");
-
-#[allow(dead_code)]
 fn print_app_info() {
     println!("{} v{} ({})", APP_NAME, APP_VERSION, APP_BUILD_AT);
     println!("{}", APP_AUTHORS);
@@ -26,7 +16,7 @@ fn print_app_info() {
 fn print_usage() {
     println!("Usage:");
     println!("  renamer [-h] [--config <path>] [[--path <path>]...] [--limit <count>] [-n|--dryrun] [--print]");
-    println!("");
+    println!();
     println!("Options:");
     println!("  -h|--help                Show help.");
     println!("  -c|--config <path>       Path to config file.");
