@@ -10,6 +10,7 @@ pub struct App {
     pub paths: Paths,
     pub limit: Limit,
     pub dryrun: bool,
+    pub verbose: u8,
 }
 
 impl App {
@@ -19,6 +20,7 @@ impl App {
             paths: None,
             limit: None,
             dryrun: false,
+            verbose: 1,
         }
     }
 }

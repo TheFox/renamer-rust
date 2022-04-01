@@ -6,10 +6,14 @@ use std::ffi::OsStr;
 use std::error::Error;
 use std::result::Result;
 use std::fs::DirEntry;
+// use ansi_term::Colour;
+// use ansi_term::Colour::Red;
 
 use crate::types::ConfigPath;
 use crate::types::Paths;
 use crate::types::Limit;
+use crate::colors::NO_COLOR;
+use crate::colors::RED;
 
 pub struct Renamer {
     config: ConfigPath,
@@ -44,7 +48,7 @@ impl Renamer {
                     let _p = &String::from(_path);
                     let _p = Path::new(OsStr::new(_p));
 
-                    println!("-> path: {:?}", _path);
+                    println!("-> path: {}", _path);
 
                     match read_dir(_p) {
                         Ok(_files) => {
@@ -67,18 +71,18 @@ impl Renamer {
                                                 }
                                             },
                                             Err(_error) => {
-                                                panic!("No metadata available for {:?}: {}", _entry, _error);
+                                                panic!("{}-> No metadata available for {:?}: {}{}", RED, _entry, _error, NO_COLOR);
                                             },
                                         }
                                     },
                                     Err(_error) => {
-                                        println!("-> File ERROR: {}", _error);
+                                        println!("{}-> File ERROR: {}{}", RED, _error, NO_COLOR);
                                     },
                                 }
                             }
                         },
                         Err(_error) => {
-                            println!("-> ERROR: {:?}", _error.description());
+                            println!("{}-> read dir ERROR: {}: {}{}", RED, _error.description(), _path, NO_COLOR);
                             break; // TODO
                         },
                     }

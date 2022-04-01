@@ -2,7 +2,9 @@
 include!(concat!(env!("OUT_DIR"), "/config.rs"));
 
 use std::env::args;
-use std::io::Result;
+use std::io::Result as IoResult;
+use std::result::Result as ResResult;
+
 use renamer_lib::app::App;
 use renamer_lib::renamer::Renamer;
 
@@ -10,7 +12,7 @@ fn print_app_info() {
     println!("{} v{} ({})", APP_NAME, APP_VERSION, APP_BUILD_AT);
     println!("{}", APP_AUTHORS);
     println!("{}", APP_HOMEPAGE);
-    println!("");
+    println!();
 }
 
 fn print_usage() {
@@ -24,10 +26,11 @@ fn print_usage() {
     println!("  -l|--limit <count>       Limit files to rename.");
     println!("  -n|--dryrun              Do not change anything.");
     println!("     --print               Print config.");
-    println!();
+    println!("  --verbose <level>        Verbose Levels: 0,1,2,3");
+    println!("  -v|-vv|-vvv              Verbose");
 }
 
-fn main() -> Result<()> {
+fn main() -> IoResult<()> {
     #[cfg(debug_assertions)]
     println!("-> start");
 
@@ -97,6 +100,17 @@ fn main() -> Result<()> {
                     app.dryrun = true;
                 }
             },
+            "--verbose" => {
+                if let Some(_next) = next {
+                    if let ResResult::Ok(_next) = _next.parse::<u8>() {
+                        app.verbose = _next;
+                    }
+                    skip_next = true;
+                }
+            },
+            "-v" => { app.verbose = 1; },
+            "-vv" => { app.verbose = 2; },
+            "-vvv" => { app.verbose = 3; },
             _ => {
                 panic!("Unrecognized argument: {}", arg);
             },
@@ -108,6 +122,7 @@ fn main() -> Result<()> {
         println!("-> app.paths: {:?}", app.paths);
         println!("-> app.limit: {:?}", app.limit);
         println!("-> app.dryrun: {:?}", app.dryrun);
+        println!("-> app.verbose: {:?}", app.verbose);
     }
 
     let renamer = Renamer::new(app.config);
