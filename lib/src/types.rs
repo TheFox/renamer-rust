@@ -1,6 +1,6 @@
 /// Types
 
-// #[derive(Copy)]
+pub type FileCount = u64;
 pub type ConfigPath = Option<String>;
 pub type Paths = Option<Vec<String>>;
-pub type Limit = Option<usize>;
+pub type Limit = Option<FileCount>;

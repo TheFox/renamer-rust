@@ -1,8 +1,8 @@
 /// App
 
-use crate::types::ConfigPath;
-use crate::types::Paths;
-use crate::types::Limit;
+use renamer_lib::types::ConfigPath;
+use renamer_lib::types::Paths;
+use renamer_lib::types::Limit;
 
 #[derive(Debug)]
 pub struct App {

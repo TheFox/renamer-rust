@@ -5,8 +5,11 @@ use std::env::args;
 use std::io::Result as IoResult;
 use std::result::Result as ResResult;
 
-use renamer_lib::app::App;
 use renamer_lib::renamer::Renamer;
+use renamer_lib::types::FileCount;
+
+mod app;
+use crate::app::App;
 
 fn print_app_info() {
     println!("{} v{} ({})", APP_NAME, APP_VERSION, APP_BUILD_AT);
@@ -17,7 +20,7 @@ fn print_app_info() {
 
 fn print_usage() {
     println!("Usage:");
-    println!("  renamer [-h] [-c|--config <path>] [[-p|--path <path>]...] [-l|--limit <count>] [-n|--dryrun] [--print]");
+    println!("  renamer [-h] [-c|--config <path>] [[-p|--path <path>]...] [-l|--limit <count>] [-n|--dryrun]");
     println!();
     println!("Options:");
     println!("  -h|--help                Show help.");
@@ -25,7 +28,7 @@ fn print_usage() {
     println!("  -p|--path <path>         Path to root directory. Multiple -p arguments possible.");
     println!("  -l|--limit <count>       Limit files to rename.");
     println!("  -n|--dryrun              Do not change anything.");
-    println!("     --print               Print config.");
+    // println!("     --print               Print config.");
     println!("  --verbose <level>        Verbose Levels: 0,1,2,3");
     println!("  -v|-vv|-vvv              Verbose");
 }
@@ -91,7 +94,7 @@ fn main() -> IoResult<()> {
             },
             "-l" | "--limit" => {
                 if let Some(_next) = next {
-                    app.limit = Some(_next.parse::<usize>().unwrap());
+                    app.limit = Some(_next.parse::<FileCount>().unwrap());
                     skip_next = true;
                 }
             },
@@ -125,8 +128,15 @@ fn main() -> IoResult<()> {
         println!("-> app.verbose: {:?}", app.verbose);
     }
 
-    let renamer = Renamer::new(app.config);
-    renamer.rename(app.paths, app.limit, app.dryrun);
+    let renamer = Renamer::new(app.config, app.limit, app.dryrun);
+    let stats = renamer.rename(app.paths);
+
+    println!("-> dirs:     {}", stats.dirs);
+    println!("-> files:    {}", stats.files);
+    println!("-> renamed:  {}", stats.renamed);
+    println!("-> errors:   {}", stats.errors);
+    println!("-> warnings: {}", stats.warnings);
+    println!("-> rest:     {:?}", stats.rest);
 
     #[cfg(debug_assertions)]
     println!("-> end");

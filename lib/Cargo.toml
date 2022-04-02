@@ -13,3 +13,8 @@ edition = "2018"
 
 [dependencies]
 regex = "1.5"
+serde_json = "1.0"
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
