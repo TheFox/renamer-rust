@@ -18,8 +18,8 @@ pub struct Stats {
 
 impl Stats {
     pub fn new() -> Self {
-        #[cfg(debug_assertions)]
-        println!("-> Stats::new()");
+        // #[cfg(debug_assertions)]
+        // println!("-> Stats::new()");
 
         Self {
             dirs: 0,
@@ -45,8 +45,8 @@ impl Stats {
 
 impl AddAssign for Stats {
     fn add_assign(&mut self, other: Self) {
-        #[cfg(debug_assertions)]
-        println!("-> Stats::add_assign(Self)");
+        // #[cfg(debug_assertions)]
+        // println!("-> Stats::add_assign(Self)");
 
         self.dirs += other.dirs;
         self.files += other.files;
@@ -64,8 +64,8 @@ impl AddAssign for Stats {
 
 impl AddAssign<FileCount> for Stats {
     fn add_assign(&mut self, other: FileCount) {
-        #[cfg(debug_assertions)]
-        println!("-> Stats::add_assign(FileCount)");
+        // #[cfg(debug_assertions)]
+        // println!("-> Stats::add_assign(FileCount)");
 
         self.renamed += other;
 

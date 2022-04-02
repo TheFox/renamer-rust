@@ -7,6 +7,7 @@ use std::result::Result as ResResult;
 
 use renamer_lib::renamer::Renamer;
 use renamer_lib::types::FileCount;
+use renamer_lib::config::Config;
 
 mod app;
 use crate::app::App;
@@ -128,7 +129,16 @@ fn main() -> IoResult<()> {
         println!("-> app.verbose: {:?}", app.verbose);
     }
 
-    let renamer = Renamer::new(app.config, app.limit, app.dryrun);
+    // let config = Config::from_config_path(app.config);
+    // let config: Option<&Config> = match app.config {
+    //     Some(_config) => Some(&Config::from_config_path(_config)),
+    //     None => None,
+    // };
+    // let renamer = Renamer::new(config, app.limit, app.dryrun);
+
+    let config: &Config = &Config::from_config_path(_config);
+    let renamer = Renamer::new(config, app.limit, app.dryrun);
+
     let stats = renamer.rename(app.paths);
 
     println!("-> dirs:     {}", stats.dirs);

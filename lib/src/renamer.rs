@@ -20,19 +20,19 @@ use crate::colors::BLUE;
 use crate::config::Config;
 use crate::stats::Stats;
 
-pub struct Renamer {
-    config: Config,
+pub struct Renamer<'a> {
+    config: &'a Config,
     limit: Limit,
     dryrun: bool,
 }
 
 impl Renamer {
-    pub fn new(config_path: ConfigPath, limit: Limit, dryrun: bool) -> Self {
+    pub fn new(config: &Config, limit: Limit, dryrun: bool) -> Self {
         #[cfg(debug_assertions)]
-        println!("-> Renamer::new({:?}, {:?}, {:?})", config_path, limit, dryrun);
+        println!("-> Renamer::new()");
 
         Self {
-            config: Config::from_file(config_path),
+            config: config,
             limit: limit,
             dryrun: dryrun,
         }
@@ -41,6 +41,7 @@ impl Renamer {
     pub fn rename(&self, paths: Paths) -> Stats {
         if cfg!(debug_assertions) {
             println!("-> Renamer::rename({:?})", paths);
+            dbg!(self.config);
         }
 
         let mut stats = Stats::new();
@@ -53,12 +54,24 @@ impl Renamer {
         match paths {
             Some(_paths) => {
                 'paths_loop: for _path in &_paths {
-                    let _p = &String::from(_path);
-                    let _p = Path::new(OsStr::new(_p));
+                    let _ppath = &String::from(_path);
+                    let _ppath = Path::new(OsStr::new(_ppath));
 
-                    println!("-> path: {}", _path);
+                    let _config1 = _ppath.join("renamer.json");
+                    let _config2 = _ppath.join(".renamer.json");
 
-                    match read_dir(_p) {
+                    println!("-> path: {:?}", _ppath);
+                    println!("-> _config1: {:?} {}", _config1, _config1.exists());
+                    println!("-> _config2: {:?} {}", _config2, _config2.exists());
+
+                    let local_config: Option<Config> = if (&_config1).exists() {
+                        Some(Config::from_path(_config1))
+                    } else if (&_config2).exists() {
+                        Some(Config::from_path(_config2))
+                    }
+                    else { None };
+
+                    match read_dir(_ppath) {
                         Ok(_files) => {
                             'files_loop: for _file in _files {
                                 match _file {
@@ -85,10 +98,11 @@ impl Renamer {
                                                     let _spaths = Some(vec![_entry.path().display().to_string()]);
 
                                                     // let rest = Some(self.stats.rest);
-                                                    let rest = None;
-                                                    let _renamer = Self::new(None, rest, self.dryrun);
-                                                    let _sstats = _renamer.rename(_spaths);
-                                                    stats += _sstats;
+                                                    let rest: Option<u8> = None;
+
+                                                    // let _renamer = Self::new(None, rest, self.dryrun);
+                                                    // let _sstats = _renamer.rename(_spaths);
+                                                    // stats += _sstats;
                                                 } else if _metadata.is_file() {
                                                     println!("  -> is file");
                                                     stats.files += 1;
