@@ -76,6 +76,8 @@ impl Config {
         println!("{}-> merge{}", BLUE, config_path, NO_COLOR);
 
         let mut config = self.clone();
+
+        config
     }
 }
 
