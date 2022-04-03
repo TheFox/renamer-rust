@@ -129,18 +129,10 @@ fn main() -> IoResult<()> {
         println!("-> app.verbose: {:?}", app.verbose);
     }
 
-    // let config = Config::from_config_path(app.config);
-    // let config: Option<&Config> = match app.config {
-    //     Some(_config) => Some(&Config::from_config_path(_config)),
-    //     None => None,
-    // };
-    // let renamer = Renamer::new(config, app.limit, app.dryrun);
-
-    let config: &Config = &Config::from_config_path(_config);
+    let config = Config::from_config_path(app.config);
     let renamer = Renamer::new(config, app.limit, app.dryrun);
 
     let stats = renamer.rename(app.paths);
-
     println!("-> dirs:     {}", stats.dirs);
     println!("-> files:    {}", stats.files);
     println!("-> renamed:  {}", stats.renamed);

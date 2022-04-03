@@ -20,14 +20,14 @@ use crate::colors::BLUE;
 use crate::config::Config;
 use crate::stats::Stats;
 
-pub struct Renamer<'a> {
-    config: &'a Config,
+pub struct Renamer {
+    config: Config,
     limit: Limit,
     dryrun: bool,
 }
 
 impl Renamer {
-    pub fn new(config: &Config, limit: Limit, dryrun: bool) -> Self {
+    pub fn new(config: Config, limit: Limit, dryrun: bool) -> Self {
         #[cfg(debug_assertions)]
         println!("-> Renamer::new()");
 
@@ -41,7 +41,7 @@ impl Renamer {
     pub fn rename(&self, paths: Paths) -> Stats {
         if cfg!(debug_assertions) {
             println!("-> Renamer::rename({:?})", paths);
-            dbg!(self.config);
+            // dbg!(self.config);
         }
 
         let mut stats = Stats::new();
@@ -65,11 +65,19 @@ impl Renamer {
                     println!("-> _config2: {:?} {}", _config2, _config2.exists());
 
                     let local_config: Option<Config> = if (&_config1).exists() {
-                        Some(Config::from_path(_config1))
+                        Some(Config::from_path_buf(_config1))
                     } else if (&_config2).exists() {
-                        Some(Config::from_path(_config2))
+                        Some(Config::from_path_buf(_config2))
                     }
                     else { None };
+
+                    let merged_config: Config = match local_config {
+                        Some(_config) => {
+                            println!("-> _config: {:?}", _config);
+                            Config::new()
+                        },
+                        None => Config::new(),
+                    };
 
                     match read_dir(_ppath) {
                         Ok(_files) => {
@@ -97,10 +105,7 @@ impl Renamer {
 
                                                     let _spaths = Some(vec![_entry.path().display().to_string()]);
 
-                                                    // let rest = Some(self.stats.rest);
-                                                    let rest: Option<u8> = None;
-
-                                                    // let _renamer = Self::new(None, rest, self.dryrun);
+                                                    // let _renamer = Self::new(None, stats.rest, self.dryrun);
                                                     // let _sstats = _renamer.rename(_spaths);
                                                     // stats += _sstats;
                                                 } else if _metadata.is_file() {

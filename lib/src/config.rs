@@ -49,8 +49,8 @@ impl Config {
         }
     }
 
-    pub fn from_file(_config_path: String) -> Self {
-        let data = read_to_string(_config_path).expect("Unable to read file");
+    pub fn from_path(path: String) -> Self {
+        let data = read_to_string(path).expect("Unable to read file");
 
         // if cfg!(debug_assertions) {
         //     let json: Value = from_str(&data).expect("JSON does not have correct format.");
@@ -63,12 +63,32 @@ impl Config {
     pub fn from_config_path(config_path: ConfigPath) -> Self {
         println!("{}-> config path: {:?}{}", BLUE, config_path, NO_COLOR);
         match config_path {
-            Some(_config_path) => Self::from_file(_config_path),
+            Some(_config_path) => Self::from_path(_config_path),
             None => Self::new(),
         }
     }
 
-    pub fn from_path(path: PathBuf) -> Self {
-        Self::from_file(path.display().to_string())
+    pub fn from_path_buf(path_buf: PathBuf) -> Self {
+        Self::from_path(path_buf.display().to_string())
+    }
+
+    pub fn merge(&mut self) -> Self {
+        println!("{}-> merge{}", BLUE, config_path, NO_COLOR);
+
+        let mut config = self.clone();
+    }
+}
+
+#[cfg(test)]
+mod tests_config {
+    use super::Config;
+
+    #[test]
+    fn test_config_merge() {
+        let mut c1 = Config::new();
+        c1.name = Some(String::from("c1"));
+
+        let mut c2 = Config::new();
+        c2.name = Some(String::from("c2"));
     }
 }
