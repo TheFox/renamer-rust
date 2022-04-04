@@ -39,7 +39,10 @@ fn merge_vars(config: &Config, other: &Config) -> VarsOption {
             println!("  -> var2: '{}' {:?}", name, _var);
             // vars.insert("x".to_string(), Var::new());
 
-            if _vars1.contains_key(name) {}
+            if _vars1.contains_key(name) {
+                vars.get_mut(name).unwrap().r#type = _var.r#type.clone();
+                vars.get_mut(name).unwrap().format = _var.format.clone();
+            }
             else {
                 vars.insert(name.to_string(), Var::new());
             }
@@ -164,7 +167,8 @@ impl Config {
         // Vars
         config.vars = merge_vars(&self, &other);
 
-        println!("-> new config: {:?}", config);
+        // println!("-> new config: {:?}", config);
+        dbg!(&config);
 
         config
     }
@@ -213,12 +217,20 @@ mod tests_config {
 
     #[test]
     fn test_config_merge_vars() {
+        let mut var1a = Var::new();
+        var1a.r#type = "int1".to_string();
+        var1a.format = Some("f1".to_string());
+
+        let mut var1b = Var::new();
+        var1b.r#type = "int2".to_string();
+        var1a.format = Some("f2".to_string());
+
         let mut vars1: HashMap<String, Var> = HashMap::new();
-        vars1.insert("v1".to_string(), Var::new());
+        vars1.insert("v1".to_string(), var1a);
         vars1.insert("v2".to_string(), Var::new());
 
         let mut vars2: HashMap<String, Var> = HashMap::new();
-        vars2.insert("v1".to_string(), Var::new());
+        vars2.insert("v1".to_string(), var1b);
         vars2.insert("v3".to_string(), Var::new());
 
         let mut source_c1 = Config::new();
@@ -229,7 +241,9 @@ mod tests_config {
 
         let merged_c3 = source_c1.merge(&source_c2);
 
-        assert_eq!(3, merged_c3.vars.unwrap().len());
+        assert_eq!(3, merged_c3.vars.as_ref().unwrap().len());
+        assert_eq!("int2".to_string(), merged_c3.vars.as_ref().unwrap()["v1"].r#type);
+        assert_eq!(&"f2".to_string(), merged_c3.vars.as_ref().unwrap()["v1"].format.as_ref().unwrap());
     }
 
     type TestConfig = bool;
