@@ -14,14 +14,18 @@ use crate::colors::NO_COLOR;
 use crate::colors::RED;
 use crate::colors::BLUE;
 
+type Vars = HashMap<String, Var>;
+type VarsOption = Option<Vars>;
+
 fn print_type_of<T>(_: &T) {
     println!("{}", std::any::type_name::<T>())
 }
 
-fn merge_vars(config: &mut Config, other: &Config) {
-    println!("-> merge_vars");
+fn merge_vars(config: &Config, other: &Config) -> VarsOption {
+    println!("-> merge_vars()");
 
     if config.vars.is_some() && other.vars.is_some() {
+        // let _vars1: &mut HashMap<_, _> = &mut config.vars.as_mut().unwrap();
         let _vars1 = config.vars.as_ref().unwrap();
         let _vars2 = other.vars.as_ref().unwrap();
 
@@ -29,19 +33,29 @@ fn merge_vars(config: &mut Config, other: &Config) {
         println!("  -> vars1: {:?}", _vars1);
         println!("  -> vars2: {:?}", _vars2);
 
-        for (name, _c) in _vars1 {
-            println!("  -> var1: '{}' {:?}", name, _c);
-            if _vars2.contains_key(name) {}
+        let mut vars: Vars = _vars1.clone();
+
+        for (name, _var) in _vars2 {
+            println!("  -> var2: '{}' {:?}", name, _var);
+            // vars.insert("x".to_string(), Var::new());
+
+            if _vars1.contains_key(name) {}
             else {
-                _vars2.insert(name.to_string(), *_c);
+                vars.insert(name.to_string(), Var::new());
             }
         }
+
+        Some(vars)
     } else if other.vars.is_some() {
         println!("{}-> merge B vars{}", BLUE, NO_COLOR);
         panic!("not implemented B");
+        None
     } else if config.vars.is_some() {
         println!("{}-> merge C vars{}", BLUE, NO_COLOR);
         panic!("not implemented C");
+        None
+    } else {
+        None
     }
 }
 
@@ -87,7 +101,7 @@ pub struct Config {
     errors: Option<bool>,
     name: Option<String>,
     exts: Option<Vec<String>>,
-    vars: Option<HashMap<String, Var>>,
+    vars: VarsOption,
 }
 
 impl Config {
@@ -127,31 +141,30 @@ impl Config {
     pub fn merge(&mut self, other: &Self) -> Self {
         println!("{}-> merge{}", BLUE, NO_COLOR);
 
-        let mut config = self.clone();
+        let mut config = Config::new();
 
         // Root
         if let Some(_root) = &other.root {
             println!("{}-> merge root: {:?}{}", BLUE, _root, NO_COLOR);
-            // print_type_of(_root);
-            config.root = Some(*_root);
+            // config.root = Some(*_root);
         }
 
         // Errors
         if let Some(_errors) = &other.errors {
             println!("{}-> merge errors: {:?}{}", BLUE, _errors, NO_COLOR);
-            // print_type_of(_errors);
-            config.errors = Some(*_errors);
+            // config.errors = Some(*_errors);
         }
 
         // Name
         if let Some(_name) = &other.name {
             println!("{}-> merge name: {:?}{}", BLUE, _name, NO_COLOR);
-            // print_type_of(&_name);
-            config.name = Some(_name.to_string());
+            // config.name = Some(_name.to_string());
         }
 
         // Vars
-        merge_vars(&mut config, &other);
+        config.vars = merge_vars(&self, &other);
+
+        println!("-> new config: {:?}", config);
 
         config
     }
@@ -216,7 +229,7 @@ mod tests_config {
 
         let merged_c3 = source_c1.merge(&source_c2);
 
-        assert_eq!(2, merged_c3.vars.unwrap().len());
+        assert_eq!(3, merged_c3.vars.unwrap().len());
     }
 
     type TestConfig = bool;
