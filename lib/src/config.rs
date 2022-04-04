@@ -21,6 +21,8 @@ fn print_type_of<T>(_: &T) {
     println!("{}", std::any::type_name::<T>())
 }
 
+fn merge_fns() {}
+
 fn merge_vars(config: &Config, other: &Config) -> VarsOption {
     println!("-> merge_vars()");
 
@@ -35,13 +37,26 @@ fn merge_vars(config: &Config, other: &Config) -> VarsOption {
 
         let mut vars: Vars = _vars1.clone();
 
-        for (name, _var) in _vars2 {
-            println!("  -> var2: '{}' {:?}", name, _var);
+        for (name, _var2) in _vars2 {
+            println!("  -> var2: '{}' {:?}", name, _var2);
             // vars.insert("x".to_string(), Var::new());
 
-            if _vars1.contains_key(name) {
-                vars.get_mut(name).unwrap().r#type = _var.r#type.clone();
-                vars.get_mut(name).unwrap().format = _var.format.clone();
+            if vars.contains_key(name) {
+                let _var1 = vars.get_mut(name).unwrap();
+
+                if let Some(_type) = &_var2.r#type {
+                    _var1.r#type = Some(_type.clone());
+                }
+                if let Some(_format) = &_var2.format {
+                    _var1.format = Some(_format.clone());
+                }
+                if let Some(_default) = &_var2.default {
+                    _var1.default = Some(_default.clone());
+                }
+                if let Some(_fns) = &_var2.fns {
+                    dbg!(_fns);
+                    merge_fns();
+                }
             }
             else {
                 vars.insert(name.to_string(), Var::new());
@@ -64,7 +79,7 @@ fn merge_vars(config: &Config, other: &Config) -> VarsOption {
 
 #[derive(Debug, Deserialize, Clone)]
 struct Function {
-    r#fn: String,
+    r#fn: Option<String>,
     search: Option<String>,
     replace: Option<String>,
 }
@@ -72,7 +87,7 @@ struct Function {
 impl Function {
     pub fn new() -> Self {
         Self {
-            r#fn: String::from("none"),
+            r#fn: None,
             search: None,
             replace: None,
         }
@@ -81,7 +96,7 @@ impl Function {
 
 #[derive(Debug, Deserialize, Clone)]
 struct Var {
-    r#type: String,
+    r#type: Option<String>,
     format: Option<String>,
     default: Option<u64>,
     fns: Option<Vec<Function>>,
@@ -90,7 +105,7 @@ struct Var {
 impl Var {
     pub fn new() -> Self {
         Self {
-            r#type: String::from("none"),
+            r#type: None,
             format: None,
             default: None,
             fns: None,
@@ -181,7 +196,7 @@ mod tests_config {
     use super::Var;
     use super::Config;
 
-    #[test]
+    // #[test]
     fn test_config_merge_root() {
         let _data: Vec<(bool, bool, bool)> = vec![
             (false, false, false),
@@ -202,7 +217,7 @@ mod tests_config {
         }
     }
 
-    #[test]
+    // #[test]
     fn test_config_merge_name() {
         let mut source_c1 = Config::new();
         source_c1.name = Some(String::from("c1"));
@@ -218,11 +233,11 @@ mod tests_config {
     #[test]
     fn test_config_merge_vars() {
         let mut var1a = Var::new();
-        var1a.r#type = "int1".to_string();
+        var1a.r#type = Some("int1".to_string());
         var1a.format = Some("f1".to_string());
 
         let mut var1b = Var::new();
-        var1b.r#type = "int2".to_string();
+        var1b.r#type = Some("int2".to_string());
         var1a.format = Some("f2".to_string());
 
         let mut vars1: HashMap<String, Var> = HashMap::new();
@@ -242,13 +257,13 @@ mod tests_config {
         let merged_c3 = source_c1.merge(&source_c2);
 
         assert_eq!(3, merged_c3.vars.as_ref().unwrap().len());
-        assert_eq!("int2".to_string(), merged_c3.vars.as_ref().unwrap()["v1"].r#type);
+        assert_eq!(&"int2".to_string(), merged_c3.vars.as_ref().unwrap()["v1"].r#type.as_ref().unwrap());
         assert_eq!(&"f2".to_string(), merged_c3.vars.as_ref().unwrap()["v1"].format.as_ref().unwrap());
     }
 
     type TestConfig = bool;
 
-    #[test]
+    // #[test]
     fn test_config_merge_all() {
         let _data: Vec<(TestConfig, TestConfig, TestConfig)> = vec![
             (

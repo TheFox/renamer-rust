@@ -61,8 +61,8 @@ impl Renamer {
                     let _config2 = _ppath.join(".renamer.json");
 
                     println!("-> path: {:?}", _ppath);
-                    println!("-> _config1: {:?} {}", _config1, _config1.exists());
-                    println!("-> _config2: {:?} {}", _config2, _config2.exists());
+                    println!("  -> config1: {:?} {}", _config1, _config1.exists());
+                    println!("  -> config2: {:?} {}", _config2, _config2.exists());
 
                     let local_config: Option<Config> = if (&_config1).exists() {
                         Some(Config::from_path_buf(_config1))
