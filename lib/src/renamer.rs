@@ -142,7 +142,7 @@ impl Renamer {
                             }
                         },
                         Err(_error) => {
-                            println!("{}-> read dir ERROR: {}: {}{}", RED, _error.description(), _path, NO_COLOR);
+                            println!("{}-> read dir ERROR: {}: {}{}", RED, _error.to_string(), _path, NO_COLOR);
                             stats.errors += 1;
                         },
                     }
