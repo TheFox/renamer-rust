@@ -18,6 +18,8 @@ type Exts = Vec<String>;
 type ExtsOption = Option<Exts>;
 type Vars = HashMap<String, Var>;
 type VarsOption = Option<Vars>;
+type Finds = HashMap<String, Vec<String>>;
+type FindsOption = Option<Finds>;
 
 fn print_type_of<T>(_: &T) {
     println!("{}", std::any::type_name::<T>())
@@ -42,10 +44,8 @@ fn merge_exts(config: &Config, other: &Config) -> ExtsOption {
         Some(exts)
     } else if other.exts.is_some() {
         panic!("merge exts not implemented B");
-        None
     } else if config.exts.is_some() {
         panic!("merge exts not implemented C");
-        None
     } else {
         None
     }
@@ -70,8 +70,8 @@ fn merge_vars(config: &Config, other: &Config) -> VarsOption {
             if vars.contains_key(name) {
                 let _var1 = vars.get_mut(name).unwrap();
 
-                if let Some(_type) = &_var2.r#type {
-                    _var1.r#type = Some(_type.clone());
+                if let Some(_type) = &_var2.vtype {
+                    _var1.vtype = Some(_type.clone());
                 }
                 if let Some(_format) = &_var2.format {
                     _var1.format = Some(_format.clone());
@@ -87,7 +87,7 @@ fn merge_vars(config: &Config, other: &Config) -> VarsOption {
                 }
             }
             else {
-                vars.insert(name.to_string(), Var::new());
+                vars.insert(name.into(), Var::new());
             }
         }
 
@@ -95,11 +95,37 @@ fn merge_vars(config: &Config, other: &Config) -> VarsOption {
     } else if other.vars.is_some() {
         println!("{}-> merge B vars{}", BLUE, NO_COLOR);
         panic!("merge vars not implemented B");
-        None
     } else if config.vars.is_some() {
         println!("{}-> merge C vars{}", BLUE, NO_COLOR);
         panic!("merge vars not implemented C");
+    } else {
         None
+    }
+}
+
+fn merge_finds(config: &Config, other: &Config) -> FindsOption {
+    println!("-> merge_finds()");
+
+    if config.finds.is_some() && other.finds.is_some() {
+        let mut finds: Finds = config.finds.as_ref().unwrap().clone();
+
+        let _finds = other.finds.as_ref().unwrap();
+        for (name, _find) in _finds {
+            println!("  -> find: {}", name);
+            if finds.contains_key(name) {
+                *finds.get_mut(name).unwrap() = _find.clone();
+            } else {
+                finds.insert(name.into(), _find.clone());
+            }
+        }
+
+        // dbg!(&finds);
+
+        Some(finds)
+    } else if other.finds.is_some() {
+        panic!("merge finds not implemented B");
+    } else if config.finds.is_some() {
+        panic!("merge finds not implemented C");
     } else {
         None
     }
@@ -107,7 +133,9 @@ fn merge_vars(config: &Config, other: &Config) -> VarsOption {
 
 #[derive(Debug, Deserialize, Clone)]
 struct Function {
-    r#fn: Option<String>,
+    #[serde(alias = "fn")]
+    name: Option<String>,
+
     search: Option<String>,
     replace: Option<String>,
 }
@@ -115,7 +143,7 @@ struct Function {
 impl Function {
     pub fn new() -> Self {
         Self {
-            r#fn: None,
+            name: None,
             search: None,
             replace: None,
         }
@@ -124,7 +152,9 @@ impl Function {
 
 #[derive(Debug, Deserialize, Clone)]
 struct Var {
-    r#type: Option<String>,
+    #[serde(alias = "type")]
+    vtype: Option<String>,
+
     format: Option<String>,
     default: Option<u64>,
     fns: Option<Vec<Function>>,
@@ -133,20 +163,20 @@ struct Var {
 impl Var {
     pub fn new() -> Self {
         Self {
-            r#type: None,
+            vtype: None,
             format: None,
             default: None,
             fns: None,
         }
     }
 
-    pub fn push(&mut self, r#fn: Function) {
+    pub fn push(&mut self, _fn: Function) {
         match &mut self.fns {
             Some(_fns) => {
-                _fns.push(r#fn);
+                _fns.push(_fn);
             },
             None => {
-                self.fns = Some(vec![r#fn]);
+                self.fns = Some(vec![_fn]);
             },
         }
     }
@@ -159,6 +189,9 @@ pub struct Config {
     name: Option<String>,
     exts: ExtsOption,
     vars: VarsOption,
+
+    #[serde(alias = "find")]
+    finds: FindsOption,
 }
 
 impl Config {
@@ -169,6 +202,7 @@ impl Config {
             name: None,
             exts: None,
             vars: None,
+            finds: None,
         }
     }
 
@@ -224,6 +258,9 @@ impl Config {
         // Vars
         config.vars = merge_vars(&self, &other);
 
+        // Finds
+        config.finds = merge_finds(&self, &other);
+
         // println!("-> new config: {:?}", config);
         // dbg!(&config);
 
@@ -248,6 +285,7 @@ mod tests_vec {
 #[cfg(test)]
 mod tests_config {
     use std::collections::HashMap;
+    use super::Finds;
     use super::Function;
     use super::Var;
     use super::Config;
@@ -304,23 +342,23 @@ mod tests_config {
     #[test]
     fn test_config_merge_vars() {
         let mut fn1 = Function::new();
-        fn1.r#fn = Some("fn1".into());
+        fn1.name = Some("fn1".into());
 
         let mut fn2 = Function::new();
-        fn2.r#fn = Some("fn2".into());
+        fn2.name = Some("fn2".into());
 
         let mut var1a = Var::new();
-        var1a.r#type = Some("int1".into());
+        var1a.vtype = Some("int1".into());
         var1a.format = Some("f1".into());
         var1a.push(fn1);
 
         let mut var1b = Var::new();
-        var1b.r#type = Some("int2".into());
+        var1b.vtype = Some("int2".into());
         var1b.format = Some("f2".into());
         var1b.push(fn2);
 
         let mut var4a = Var::new();
-        var4a.r#type = Some("int4".into());
+        var4a.vtype = Some("int4".into());
 
         let mut var4b = Var::new();
         var4b.format = Some("f4".into());
@@ -344,11 +382,45 @@ mod tests_config {
         let merged_c3 = source_c1.merge(&source_c2);
 
         assert_eq!(4, merged_c3.vars.as_ref().unwrap().len());
-        assert_eq!(&"int2".to_string(), merged_c3.vars.as_ref().unwrap()["var1"].r#type.as_ref().unwrap());
-        assert_eq!(&"f2".to_string(), merged_c3.vars.as_ref().unwrap()["var1"].format.as_ref().unwrap());
+        assert_eq!("int2", merged_c3.vars.as_ref().unwrap()["var1"].vtype.as_ref().unwrap());
+        assert_eq!("f2", merged_c3.vars.as_ref().unwrap()["var1"].format.as_ref().unwrap());
 
-        assert_eq!(&"int4".to_string(), merged_c3.vars.as_ref().unwrap()["var4"].r#type.as_ref().unwrap());
-        assert_eq!(&"f4".to_string(), merged_c3.vars.as_ref().unwrap()["var4"].format.as_ref().unwrap());
+        assert_eq!("int4", merged_c3.vars.as_ref().unwrap()["var4"].vtype.as_ref().unwrap());
+        assert_eq!("f4", merged_c3.vars.as_ref().unwrap()["var4"].format.as_ref().unwrap());
+        assert_eq!("f4", merged_c3.vars.as_ref().unwrap()["var4"].format.as_ref().unwrap());
+    }
+
+    #[test]
+    fn test_config_merge_finds() {
+        let mut finds1 = Finds::new();
+        finds1.insert("regex1".into(), vec!["var1".into(), "var2".into(), "var3".into()]);
+        finds1.insert("regex2".into(), vec!["var1".into(), "var2".into()]);
+
+        let mut finds2 = Finds::new();
+        finds2.insert("regex1".into(), vec!["var5".into(), "var6".into()]);
+        finds2.insert("regex3".into(), vec!["var3".into(), "var4".into()]);
+
+        let mut source_c1 = Config::new();
+        source_c1.finds = Some(finds1);
+
+        let mut source_c2 = Config::new();
+        source_c2.finds = Some(finds2);
+
+        let merged_c3 = source_c1.merge(&source_c2);
+
+        assert_eq!(3, merged_c3.finds.as_ref().unwrap().len());
+
+        assert_eq!(2, merged_c3.finds.as_ref().unwrap()["regex1"].len());
+        assert_eq!("var5", merged_c3.finds.as_ref().unwrap()["regex1"][0]);
+        assert_eq!("var6", merged_c3.finds.as_ref().unwrap()["regex1"][1]);
+
+        assert_eq!(2, merged_c3.finds.as_ref().unwrap()["regex2"].len());
+        assert_eq!("var1", merged_c3.finds.as_ref().unwrap()["regex2"][0]);
+        assert_eq!("var2", merged_c3.finds.as_ref().unwrap()["regex2"][1]);
+
+        assert_eq!(2, merged_c3.finds.as_ref().unwrap()["regex3"].len());
+        assert_eq!("var3", merged_c3.finds.as_ref().unwrap()["regex3"][0]);
+        assert_eq!("var4", merged_c3.finds.as_ref().unwrap()["regex3"][1]);
     }
 
     type TestConfig = bool;

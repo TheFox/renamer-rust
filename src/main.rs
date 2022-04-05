@@ -130,6 +130,8 @@ fn main() -> IoResult<()> {
     }
 
     let config = Config::from_config_path(app.config);
+    dbg!(&config);
+
     let renamer = Renamer::new(config, app.limit, app.dryrun);
 
     let stats = renamer.rename(app.paths);
