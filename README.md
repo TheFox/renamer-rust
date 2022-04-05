@@ -16,3 +16,17 @@ TODO
 ```bash
 ./bin/dev.sh -c ./config.json -p tmp/test2 -l 1 -n
 ```
+
+## Config Data Structure
+
+### Example
+
+See [config.json](config.json) example file.
+
+### Fields
+
+#### root
+
+Type: bool
+
+If true, renamer will not go up the directory tree for the next config file (`.renamer.json` or `renamer.json`).
