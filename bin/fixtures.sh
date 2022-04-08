@@ -7,13 +7,13 @@ cd "${SCRIPT_BASEDIR}/.."
 mkdir -p tmp/test1
 mkdir -p tmp/test2/test3
 
-touch tmp/test1/test1a.txt
+touch tmp/test1/test1a.{txt,mkv}
 
-touch tmp/test2/test2a.txt
-touch tmp/test2/test2b.txt
+touch tmp/test2/test2a.{txt,mkv}
+touch tmp/test2/test2b.{txt,mkv}
 
-touch tmp/test2/test3/test3a.txt
-touch tmp/test2/test3/test3b.txt
+touch tmp/test2/test3/test3a.{txt,mkv}
+touch tmp/test2/test3/test3b.{txt,mkv}
 
 echo '{
     "is_root": false

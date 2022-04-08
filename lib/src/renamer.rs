@@ -17,6 +17,7 @@ use crate::types::FileCount;
 use crate::colors::NO_COLOR;
 use crate::colors::RED;
 use crate::colors::BLUE;
+use crate::colors::GREEN;
 use crate::config::Config;
 use crate::stats::Stats;
 
@@ -24,6 +25,7 @@ pub struct Renamer {
     config: Config,
     limit: Limit,
     dryrun: bool,
+    level: u64,
 }
 
 impl Renamer {
@@ -31,16 +33,33 @@ impl Renamer {
         #[cfg(debug_assertions)]
         println!("-> Renamer::new()");
 
+        // dbg!(&config);
+
         Self {
             config: config,
             limit: limit,
             dryrun: dryrun,
+            level: 0,
+        }
+    }
+
+    fn traverse(config: Config, limit: Limit, dryrun: bool, level: u64) -> Self {
+        #[cfg(debug_assertions)]
+        println!("-> Renamer::traverse({})", level);
+
+        // dbg!(&config);
+
+        Self {
+            config: config,
+            limit: limit,
+            dryrun: dryrun,
+            level: level,
         }
     }
 
     pub fn rename(&self, paths: Paths) -> Stats {
         if cfg!(debug_assertions) {
-            println!("-> Renamer::rename({:?})", paths);
+            println!("-> Renamer::rename(l={}, {:?})", self.level, paths);
             // dbg!(self.config);
         }
 
@@ -65,29 +84,32 @@ impl Renamer {
                     println!("  -> config2: {:?} {}", _config2, _config2.exists());
 
                     let local_config: Option<Config> = if (&_config1).exists() {
+                        println!("-> read config1");
                         Some(Config::from_path_buf(_config1))
                     } else if (&_config2).exists() {
+                        println!("-> read config2");
                         Some(Config::from_path_buf(_config2))
                     }
                     else { None };
 
                     let merged_config: Config = match local_config {
                         Some(_config) => {
-                            println!("-> _config: {:?}", _config);
-                            Config::new()
+                            println!("{}-> merge config: {:?}{}", BLUE, _config, NO_COLOR);
+                            self.config.merge(&_config)
                         },
-                        None => Config::new(),
+                        None => self.config.clone(),
                     };
+                    // dbg!(&merged_config);
 
                     match read_dir(_ppath) {
                         Ok(_files) => {
                             'files_loop: for _file in _files {
                                 match _file {
                                     Ok(_entry) => {
-                                        println!("{}-> file: {:?} {:?}{}", BLUE, _entry, _entry.path().file_name(), NO_COLOR);
+                                        println!("{}-> file: {:?} {:?}{}", GREEN, _entry, _entry.path().file_name(), NO_COLOR);
                                         match _entry.path().file_name() {
                                             Some(_file_name) => {
-                                                if _file_name == "renamer.json" || _file_name == "renamer.json" {
+                                                if _file_name == "renamer.json" || _file_name == ".renamer.json" {
                                                     println!("{}  -> skip{}", BLUE, NO_COLOR);
                                                     continue 'files_loop;
                                                 }
@@ -105,16 +127,21 @@ impl Renamer {
 
                                                     let _spaths = Some(vec![_entry.path().display().to_string()]);
 
-                                                    // let _renamer = Self::new(None, stats.rest, self.dryrun);
-                                                    // let _sstats = _renamer.rename(_spaths);
-                                                    // stats += _sstats;
+                                                    let _renamer = Self::traverse(merged_config.clone(), stats.rest, self.dryrun, self.level + 1);
+                                                    let _sstats = _renamer.rename(_spaths);
+                                                    stats += _sstats;
                                                 } else if _metadata.is_file() {
                                                     println!("  -> is file");
                                                     stats.files += 1;
 
                                                     match _entry.path().extension() {
                                                         Some(_ext) => {
-                                                            // TODO: skip when extension is not in the whitelist
+                                                            // dbg!(&merged_config);
+                                                            if !merged_config.has_ext(_ext.to_str().unwrap().to_string()) {
+                                                                println!("  -> not contains ext: {:?}", _ext);
+                                                                println!("{}  -> skip{}", BLUE, NO_COLOR);
+                                                                continue 'files_loop;
+                                                            }
                                                         },
                                                         None => {},
                                                     }
@@ -153,10 +180,6 @@ impl Renamer {
 
         stats
     } // pub fn rename()
-
-    pub fn print_stats(&self) {
-
-    }
 }
 
 #[cfg(test)]

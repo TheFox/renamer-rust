@@ -25,112 +25,6 @@ fn print_type_of<T>(_: &T) {
     println!("{}", std::any::type_name::<T>())
 }
 
-fn merge_exts(config: &Config, other: &Config) -> ExtsOption {
-    println!("-> merge_exts()");
-
-    if config.exts.is_some() && other.exts.is_some() {
-        let mut exts: Exts = config.exts.as_ref().unwrap().clone();
-        // dbg!(exts);
-
-        let _exts = other.exts.as_ref().unwrap();
-        // dbg!(_exts);
-
-        for _ext in _exts {
-            if !exts.contains(_ext) {
-                exts.push(_ext.clone());
-            }
-        }
-
-        Some(exts)
-    } else if other.exts.is_some() {
-        panic!("merge exts not implemented B");
-    } else if config.exts.is_some() {
-        panic!("merge exts not implemented C");
-    } else {
-        None
-    }
-}
-
-fn merge_vars(config: &Config, other: &Config) -> VarsOption {
-    // println!("-> merge_vars()");
-
-    if config.vars.is_some() && other.vars.is_some() {
-        let _vars1 = config.vars.as_ref().unwrap();
-        let _vars2 = other.vars.as_ref().unwrap();
-
-        // println!("{}-> merge A vars{}", BLUE, NO_COLOR);
-        // println!("  -> vars1: {:?}", _vars1);
-        // println!("  -> vars2: {:?}", _vars2);
-
-        let mut vars: Vars = _vars1.clone();
-
-        for (name, _var2) in _vars2 {
-            // println!("  -> var2: '{}' {:?}", name, _var2);
-
-            if vars.contains_key(name) {
-                let _var1 = vars.get_mut(name).unwrap();
-
-                if let Some(_type) = &_var2.vtype {
-                    _var1.vtype = Some(_type.clone());
-                }
-                if let Some(_format) = &_var2.format {
-                    _var1.format = Some(_format.clone());
-                }
-                if let Some(_default) = &_var2.default {
-                    _var1.default = Some(_default.clone());
-                }
-                if let Some(_fns) = &_var2.fns {
-                    for _fn in _fns {
-                        // println!("  -> fn: {:?}", _fn);
-                        _var1.push(_fn.clone());
-                    }
-                }
-            }
-            else {
-                vars.insert(name.into(), Var::new());
-            }
-        }
-
-        Some(vars)
-    } else if other.vars.is_some() {
-        println!("{}-> merge B vars{}", BLUE, NO_COLOR);
-        panic!("merge vars not implemented B");
-    } else if config.vars.is_some() {
-        println!("{}-> merge C vars{}", BLUE, NO_COLOR);
-        panic!("merge vars not implemented C");
-    } else {
-        None
-    }
-}
-
-fn merge_finds(config: &Config, other: &Config) -> FindsOption {
-    println!("-> merge_finds()");
-
-    if config.finds.is_some() && other.finds.is_some() {
-        let mut finds: Finds = config.finds.as_ref().unwrap().clone();
-
-        let _finds = other.finds.as_ref().unwrap();
-        for (name, _find) in _finds {
-            println!("  -> find: {}", name);
-            if finds.contains_key(name) {
-                *finds.get_mut(name).unwrap() = _find.clone();
-            } else {
-                finds.insert(name.into(), _find.clone());
-            }
-        }
-
-        // dbg!(&finds);
-
-        Some(finds)
-    } else if other.finds.is_some() {
-        panic!("merge finds not implemented B");
-    } else if config.finds.is_some() {
-        panic!("merge finds not implemented C");
-    } else {
-        None
-    }
-}
-
 #[derive(Debug, Deserialize, Clone)]
 struct Function {
     #[serde(alias = "fn")]
@@ -229,7 +123,93 @@ impl Config {
         Self::from_path(path_buf.display().to_string())
     }
 
-    pub fn merge(&mut self, other: &Self) -> Self {
+    fn merge_exts(&self, other: &Config) -> ExtsOption {
+        if self.exts.is_some() && other.exts.is_some() {
+            let mut exts: Exts = self.exts.as_ref().unwrap().clone();
+            let _exts = other.exts.as_ref().unwrap();
+
+            for _ext in _exts {
+                if !exts.contains(_ext) {
+                    exts.push(_ext.clone());
+                }
+            }
+
+            Some(exts)
+        } else if other.exts.is_some() {
+            Some(other.exts.as_ref().unwrap().clone())
+        } else if self.exts.is_some() {
+            Some(self.exts.as_ref().unwrap().clone())
+        } else {
+            None
+        }
+    }
+
+    fn merge_vars(&self, other: &Config) -> VarsOption {
+        if self.vars.is_some() && other.vars.is_some() {
+            let _vars1 = self.vars.as_ref().unwrap();
+            let _vars2 = other.vars.as_ref().unwrap();
+
+            let mut vars: Vars = _vars1.clone();
+
+            for (name, _var2) in _vars2 {
+                if vars.contains_key(name) {
+                    let _var1 = vars.get_mut(name).unwrap();
+
+                    if let Some(_type) = &_var2.vtype {
+                        _var1.vtype = Some(_type.clone());
+                    }
+                    if let Some(_format) = &_var2.format {
+                        _var1.format = Some(_format.clone());
+                    }
+                    if let Some(_default) = &_var2.default {
+                        _var1.default = Some(_default.clone());
+                    }
+                    if let Some(_fns) = &_var2.fns {
+                        for _fn in _fns {
+                            // println!("  -> fn: {:?}", _fn);
+                            _var1.push(_fn.clone());
+                        }
+                    }
+                }
+                else {
+                    vars.insert(name.into(), Var::new());
+                }
+            }
+
+            Some(vars)
+        } else if other.vars.is_some() {
+            panic!("merge vars not implemented B");
+        } else if self.vars.is_some() {
+            Some(self.vars.as_ref().unwrap().clone())
+        } else {
+            None
+        }
+    }
+
+    fn merge_finds(&self, other: &Config) -> FindsOption {
+        if self.finds.is_some() && other.finds.is_some() {
+            let mut finds: Finds = self.finds.as_ref().unwrap().clone();
+
+            let _finds = other.finds.as_ref().unwrap();
+            for (name, _find) in _finds {
+                if finds.contains_key(name) {
+                    *finds.get_mut(name).unwrap() = _find.clone();
+                } else {
+                    finds.insert(name.into(), _find.clone());
+                }
+            }
+
+            Some(finds)
+        } else if other.finds.is_some() {
+            Some(other.finds.as_ref().unwrap().clone())
+        } else if self.finds.is_some() {
+            Some(self.finds.as_ref().unwrap().clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn merge(&self, other: &Self) -> Self {
         println!("{}-> merge{}", BLUE, NO_COLOR);
 
         let mut config = Config::new();
@@ -253,18 +233,29 @@ impl Config {
         }
 
         // Exts
-        config.exts = merge_exts(&self, &other);
+        config.exts = self.merge_exts(&other);
 
         // Vars
-        config.vars = merge_vars(&self, &other);
+        config.vars = self.merge_vars(&other);
 
         // Finds
-        config.finds = merge_finds(&self, &other);
+        config.finds = self.merge_finds(&other);
 
         // println!("-> new config: {:?}", config);
         // dbg!(&config);
 
         config
+    }
+
+    pub fn has_ext(&self, ext: String) -> bool {
+        // println!("-> Config::has_ext()");
+        // println!("-> self.exts: {:?}", self.exts);
+        match &self.exts {
+            Some(_exts) => {
+                _exts.contains(&ext)
+            },
+            None => false,
+        }
     }
 }
 
@@ -340,6 +331,34 @@ mod tests_config {
     }
 
     #[test]
+    fn test_config_merge_exts1() {
+        let mut source_c1 = Config::new();
+        source_c1.exts = Some(vec!["ext1".into(), "ext2".into()]);
+
+        let source_c2 = Config::new();
+
+        let merged_c3 = source_c1.merge(&source_c2);
+
+        assert_eq!(2, source_c1.exts.as_ref().unwrap().len());
+        assert!(source_c2.exts.as_ref().is_none());
+        assert_eq!(2, merged_c3.exts.as_ref().unwrap().len());
+    }
+
+    #[test]
+    fn test_config_merge_exts2() {
+        let source_c1 = Config::new();
+
+        let mut source_c2 = Config::new();
+        source_c2.exts = Some(vec!["ext3".into(), "ext2".into()]);
+
+        let merged_c3 = source_c1.merge(&source_c2);
+
+        assert!(source_c1.exts.as_ref().is_none());
+        assert_eq!(2, source_c2.exts.as_ref().unwrap().len());
+        assert_eq!(2, merged_c3.exts.as_ref().unwrap().len());
+    }
+
+    #[test]
     fn test_config_merge_vars() {
         let mut fn1 = Function::new();
         fn1.name = Some("fn1".into());
@@ -391,6 +410,44 @@ mod tests_config {
     }
 
     #[test]
+    fn test_config_merge_vars1() {
+        let mut vars1: HashMap<String, Var> = HashMap::new();
+        vars1.insert("var1".into(), Var::new());
+        vars1.insert("var2".into(), Var::new());
+
+        let vars2: HashMap<String, Var> = HashMap::new();
+
+        let mut source_c1 = Config::new();
+        source_c1.vars = Some(vars1);
+
+        let mut source_c2 = Config::new();
+        source_c2.vars = Some(vars2);
+
+        let merged_c3 = source_c1.merge(&source_c2);
+
+        assert_eq!(2, merged_c3.vars.as_ref().unwrap().len());
+    }
+
+    #[test]
+    fn test_config_merge_vars2() {
+        let vars1: HashMap<String, Var> = HashMap::new();
+
+        let mut vars2: HashMap<String, Var> = HashMap::new();
+        vars2.insert("var1".into(), Var::new());
+        vars2.insert("var2".into(), Var::new());
+
+        let mut source_c1 = Config::new();
+        source_c1.vars = Some(vars1);
+
+        let mut source_c2 = Config::new();
+        source_c2.vars = Some(vars2);
+
+        let merged_c3 = source_c1.merge(&source_c2);
+
+        assert_eq!(2, merged_c3.vars.as_ref().unwrap().len());
+    }
+
+    #[test]
     fn test_config_merge_finds() {
         let mut finds1 = Finds::new();
         finds1.insert("regex1".into(), vec!["var1".into(), "var2".into(), "var3".into()]);
@@ -423,6 +480,36 @@ mod tests_config {
         assert_eq!("var4", merged_c3.finds.as_ref().unwrap()["regex3"][1]);
     }
 
+    #[test]
+    fn test_config_merge_finds1() {
+        let mut finds1 = Finds::new();
+        finds1.insert("regex1".into(), vec![]);
+
+        let mut source_c1 = Config::new();
+        source_c1.finds = Some(finds1);
+
+        let source_c2 = Config::new();
+
+        let merged_c3 = source_c1.merge(&source_c2);
+
+        assert_eq!(1, merged_c3.finds.as_ref().unwrap().len());
+    }
+
+    #[test]
+    fn test_config_merge_finds2() {
+        let mut finds2 = Finds::new();
+        finds2.insert("regex1".into(), vec![]);
+
+        let mut source_c1 = Config::new();
+
+        let mut source_c2 = Config::new();
+        source_c2.finds = Some(finds2);
+
+        let merged_c3 = source_c1.merge(&source_c2);
+
+        assert_eq!(1, merged_c3.finds.as_ref().unwrap().len());
+    }
+
     type TestConfig = bool;
 
     // #[test]
@@ -436,7 +523,7 @@ mod tests_config {
         ];
 
         for _t in _data {
-            dbg!(_t);
+            // dbg!(_t);
             let mut source_c1 = Config::new();
             source_c1.root = Some(_t.0);
 
