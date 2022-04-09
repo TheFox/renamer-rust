@@ -134,6 +134,12 @@ fn main() -> IoResult<()> {
 
     let renamer = Renamer::new(config, app.limit, app.dryrun);
 
+    if cfg!(feature="test1") {
+        renamer.test1();
+    } else {
+        println!("no test1");
+    }
+
     let stats = renamer.rename(app.paths);
     println!("-> dirs:     {}", stats.dirs);
     println!("-> files:    {}", stats.files);

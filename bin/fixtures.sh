@@ -23,6 +23,16 @@ echo '{
     "is_root": true,
     "name": "hallo%num%_%char%%ext%",
     "exts": ["mkv"],
+    "vars": {
+        "%num%": {
+            "type": "int",
+            "format": "S%02d"
+        },
+        "%char%": {
+            "type": "int",
+            "format": "S%02d"
+        }
+    },
     "finds": {
         "test(\\d)(.)": ["%num%", "%char%"]
     }

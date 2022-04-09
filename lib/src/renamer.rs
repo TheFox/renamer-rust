@@ -43,6 +43,12 @@ impl Renamer {
         }
     }
 
+    #[cfg(feature="test1")]
+    pub fn test1(&self) {
+        println!("Renamer::test1");
+        panic!("ok");
+    }
+
     fn traverse(config: Config, limit: Limit, dryrun: bool, level: u64) -> Self {
         #[cfg(debug_assertions)]
         println!("-> Renamer::traverse({})", level);
@@ -120,7 +126,6 @@ impl Renamer {
                                                 }
                                                 file_name = _file_name.to_str().unwrap().into();
                                             },
-                                            // None => {},
                                             None => {
                                                 println!("{}  -> skip, cannot extract file name from path{}", BLUE, NO_COLOR);
                                                 continue 'files_loop
@@ -161,21 +166,18 @@ impl Renamer {
 
                                                     println!("  -> check regex");
 
-                                                    for (regex, vars) in merged_config.regex_finds() {
+                                                    'finds_loop: for (regex, vars) in merged_config.regex_finds() {
                                                         println!("  -> find: {:?}", regex);
-                                                        // if regex.is_match(file_name) {}
-                                                        // let caps = regex.captures(&file_name);
-                                                        // for cap in regex.captures_iter(&file_name) {
-                                                        //     println!("  -> regex: {:?}", &cap);
-                                                        // }
                                                         match regex.captures(&file_name) {
                                                             Some(caps) => {
                                                                 println!("  -> caps: {:?}", caps);
                                                                 let mut i = 1;
                                                                 for var in vars {
                                                                     println!("  -> var: #{} {:?} => {}", i, var, &caps[i]);
+                                                                    merged_config.format_var(var, caps[i].to_string());
                                                                     i += 1;
                                                                 }
+                                                                break 'finds_loop;
                                                             },
                                                             None => {
                                                                 println!("{}  -> no match: {}{}", BLUE, regex, NO_COLOR);

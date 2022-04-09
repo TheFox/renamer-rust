@@ -4,6 +4,9 @@ use std::fs::read_to_string;
 use std::path::PathBuf;
 use std::collections::HashMap;
 use regex::Regex;
+// use sprintf::sprintf;
+// use dynfmt::{Format, NoopFormat};
+use lazy_static::lazy_static;
 
 use serde::Serialize;
 use serde::Deserialize;
@@ -68,6 +71,42 @@ impl Var {
         }
     }
 
+    pub fn from(vtype: String, format: String) -> Self {
+        Self {
+            vtype: Some(vtype),
+            format: Some(format),
+            default: None,
+            fns: None,
+        }
+    }
+
+    fn format(&self, value: String) -> String {
+        match &self.format {
+            Some(_format) => {
+                lazy_static! {
+                    static ref re: Regex = Regex::new(r"%\d+.").unwrap();
+                }
+                let caps = re.captures(&_format).unwrap();
+                let _formatted = match &caps[0] {
+                    "%02d" | "%02s" => format!("{:0>2}", value),
+                    "%03d" | "%03s" => format!("{:0>3}", value),
+
+                    "%2d" | "%2s" => format!("{:>2}", value),
+                    "%3d" | "%3s" => format!("{:>3}", value),
+
+                    _ => panic!("format not implemented: {}", _format),
+                };
+                _format.replace(&caps[0], &_formatted)
+            },
+            None => panic!("no format defined for variable")
+        }
+    }
+
+    pub fn format_s(&self, value: &str) -> String {
+        self.format(value.to_string())
+    }
+
+    /// Push Function
     pub fn push(&mut self, _fn: Function) {
         match &mut self.fns {
             Some(_fns) => {
@@ -213,7 +252,7 @@ impl Config {
 
             Some(vars)
         } else if other.vars.is_some() {
-            panic!("merge vars not implemented B");
+            Some(other.vars.as_ref().unwrap().clone())
         } else if self.vars.is_some() {
             Some(self.vars.as_ref().unwrap().clone())
         } else {
@@ -315,8 +354,6 @@ impl Config {
         }
     }
 
-    // pub fn format() ->
-
     pub fn regex_finds(&self) -> RegexFinds {
         match &self.regex_finds {
             Some(_x) => _x.to_vec(),
@@ -326,6 +363,21 @@ impl Config {
                 RegexFinds::new()
             },
         }
+    }
+
+    pub fn format_var(&self, name: String, value: String) -> String {
+        match &self.vars {
+            Some(_vars) => {
+                match &_vars.get(&name) {
+                    Some(_var) => {
+                        _var.format(value)
+                    },
+                    None => panic!("variable not found: {}", name),
+                }
+            },
+            None => panic!("no variables defined"),
+        }
+
     }
 }
 
@@ -340,6 +392,43 @@ mod tests_vec {
 
         assert_eq!(6, v1.len());
         assert_eq!(0, v2.len());
+    }
+}
+
+#[cfg(test)]
+mod tests_var {
+    use super::Var;
+
+    #[test]
+    fn test_var() {
+        let v1 = Var::from("v1".into(), "S%02d".into());
+
+        assert_eq!("v1".to_string(), v1.vtype.unwrap());
+        assert_eq!("S%02d".to_string(), v1.format.unwrap());
+    }
+
+    #[test]
+    fn test_var_format() {
+        let v1 = Var::from("v1".into(), "S%2s".into());
+        assert_eq!("S 1".to_string(), v1.format_s("1"));
+        assert_eq!("S10".to_string(), v1.format_s("10"));
+        assert_eq!("S100".to_string(), v1.format_s("100"));
+    }
+
+    #[test]
+    fn test_var_format1() {
+        let v1 = Var::from("v1".into(), "S%02s".into());
+        assert_eq!("S01".to_string(), v1.format_s("1"));
+        assert_eq!("S10".to_string(), v1.format_s("10"));
+        assert_eq!("S100".to_string(), v1.format_s("100"));
+    }
+
+    #[test]
+    fn test_var_format2() {
+        let v1 = Var::from("v1".into(), "S%03s".into());
+        assert_eq!("S001".to_string(), v1.format_s("1"));
+        assert_eq!("S010".to_string(), v1.format_s("10"));
+        assert_eq!("S100".to_string(), v1.format_s("100"));
     }
 }
 
@@ -485,35 +574,33 @@ mod tests_config {
         vars1.insert("var1".into(), Var::new());
         vars1.insert("var2".into(), Var::new());
 
-        let vars2: HashMap<String, Var> = HashMap::new();
-
         let mut source_c1 = Config::new();
         source_c1.vars = Some(vars1);
 
         let mut source_c2 = Config::new();
-        source_c2.vars = Some(vars2);
 
         let merged_c3 = source_c1.merge(&source_c2);
 
+        assert_eq!(2, source_c1.vars.as_ref().unwrap().len());
+        assert!(source_c2.vars.is_none());
         assert_eq!(2, merged_c3.vars.as_ref().unwrap().len());
     }
 
     #[test]
     fn test_config_merge_vars2() {
-        let vars1: HashMap<String, Var> = HashMap::new();
-
         let mut vars2: HashMap<String, Var> = HashMap::new();
         vars2.insert("var1".into(), Var::new());
         vars2.insert("var2".into(), Var::new());
 
         let mut source_c1 = Config::new();
-        source_c1.vars = Some(vars1);
 
         let mut source_c2 = Config::new();
         source_c2.vars = Some(vars2);
 
         let merged_c3 = source_c1.merge(&source_c2);
 
+        assert!(source_c1.vars.is_none());
+        assert_eq!(2, source_c2.vars.as_ref().unwrap().len());
         assert_eq!(2, merged_c3.vars.as_ref().unwrap().len());
     }
 
