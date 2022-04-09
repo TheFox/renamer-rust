@@ -20,5 +20,10 @@ echo '{
 }' > tmp/test1/renamer.json
 
 echo '{
-    "is_root": true
+    "is_root": true,
+    "name": "hallo%num%_%char%%ext%",
+    "exts": ["mkv"],
+    "finds": {
+        "test(\\d)(.)": ["%num%", "%char%"]
+    }
 }' > tmp/test2/renamer.json

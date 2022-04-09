@@ -1,11 +1,13 @@
 
+use core::result::Result;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 use std::collections::HashMap;
+use regex::Regex;
 
 use serde::Serialize;
 use serde::Deserialize;
-use serde_json::Result;
+// use serde_json::Result;
 use serde_json::from_str;
 use serde_json::Value;
 
@@ -20,6 +22,8 @@ type Vars = HashMap<String, Var>;
 type VarsOption = Option<Vars>;
 type Finds = HashMap<String, Vec<String>>;
 type FindsOption = Option<Finds>;
+type RegexFinds = Vec<(Regex, Vec<String>)>;
+type RegexFindsOption = Option<RegexFinds>;
 
 fn print_type_of<T>(_: &T) {
     println!("{}", std::any::type_name::<T>())
@@ -86,6 +90,9 @@ pub struct Config {
 
     #[serde(alias = "find")]
     finds: FindsOption,
+
+    #[serde(skip_deserializing)]
+    regex_finds: RegexFindsOption,
 }
 
 impl Config {
@@ -97,18 +104,20 @@ impl Config {
             exts: None,
             vars: None,
             finds: None,
+            regex_finds: None,
         }
     }
 
+    pub fn from_str(s: &String) -> Self {
+        println!("{}-> Config::from_str(){}", BLUE, NO_COLOR);
+        let mut c: Self = from_str(s).expect("JSON was not well-formatted");
+        c.setup();
+        c
+    }
+
     pub fn from_path(path: String) -> Self {
-        let data = read_to_string(path).expect("Unable to read file");
-
-        // if cfg!(debug_assertions) {
-        //     let json: Value = from_str(&data).expect("JSON does not have correct format.");
-        //     dbg!(json);
-        // }
-
-        from_str(&data).expect("JSON was not well-formatted")
+        let data: String = read_to_string(path).expect("Unable to read file");
+        Self::from_str(&data)
     }
 
     pub fn from_config_path(config_path: ConfigPath) -> Self {
@@ -121,6 +130,32 @@ impl Config {
 
     pub fn from_path_buf(path_buf: PathBuf) -> Self {
         Self::from_path(path_buf.display().to_string())
+    }
+
+    fn setup(&mut self) {
+        println!("{}-> Config::setup(){}", BLUE, NO_COLOR);
+
+        self.setup_regex_finds();
+    }
+
+    fn setup_regex_finds(&mut self) {
+        if let Some(_finds) = &self.finds {
+            let mut regex_finds = RegexFinds::new();
+            for (regex_s, vars_a) in _finds {
+                println!("-> setup: {:?}", regex_s);
+
+                match Regex::new(regex_s) {
+                    Result::Ok(_r) => {
+                        let find = (_r, vars_a.clone());
+                        regex_finds.push(find);
+                    },
+                    Result::Err(_e) => {
+                        panic!("Cannot parse 'finds' regexp: {}", regex_s);
+                    },
+                }
+            }
+            self.regex_finds = Some(regex_finds);
+        }
     }
 
     fn merge_exts(&self, other: &Config) -> ExtsOption {
@@ -240,6 +275,7 @@ impl Config {
 
         // Finds
         config.finds = self.merge_finds(&other);
+        config.setup_regex_finds();
 
         // println!("-> new config: {:?}", config);
         // dbg!(&config);
@@ -255,6 +291,40 @@ impl Config {
                 _exts.contains(&ext)
             },
             None => false,
+        }
+    }
+
+    pub fn is_root(&self) -> bool {
+        match &self.root {
+            Some(root) => *root,
+            None => false,
+        }
+    }
+
+    pub fn has_name(&self) -> bool {
+        match &self.name {
+            Some(name) => name.len() > 0,
+            None => false,
+        }
+    }
+
+    pub fn name(&self) -> String {
+        match &self.name {
+            Some(name) => name.clone(),
+            None => panic!("config doesn't have a name"),
+        }
+    }
+
+    // pub fn format() ->
+
+    pub fn regex_finds(&self) -> RegexFinds {
+        match &self.regex_finds {
+            Some(_x) => _x.to_vec(),
+            None => {
+                // let _x = vec![];
+                // &_x
+                RegexFinds::new()
+            },
         }
     }
 }
@@ -510,29 +580,21 @@ mod tests_config {
         assert_eq!(1, merged_c3.finds.as_ref().unwrap().len());
     }
 
-    type TestConfig = bool;
+    #[test]
+    fn test_config_regex_finds1() {
+        let mut source_c1 = Config::new();
+        assert!(source_c1.regex_finds.is_none());
+    }
 
-    // #[test]
-    fn test_config_merge_all() {
-        let _data: Vec<(TestConfig, TestConfig, TestConfig)> = vec![
-            (
-                (false),
-                (false),
-                (false),
-            ),
-        ];
+    #[test]
+    fn test_config_regex_finds2() {
+        let data: String = r#"{"finds":{"^a":["%var1%"]}}"#.into();
+        let mut source_c1 = Config::from_str(&data);
+        assert_eq!(1, source_c1.finds.as_ref().unwrap().len());
+        assert_eq!(1, source_c1.regex_finds.as_ref().unwrap().len());
 
-        for _t in _data {
-            // dbg!(_t);
-            let mut source_c1 = Config::new();
-            source_c1.root = Some(_t.0);
-
-            let mut source_c2 = Config::new();
-            source_c2.root = Some(_t.1);
-
-            let merged_c3 = source_c1.merge(&source_c2);
-
-            assert_eq!(_t.2, merged_c3.root.unwrap());
-        }
+        let mut source_c2 = source_c1.clone();
+        assert_eq!(1, source_c2.finds.as_ref().unwrap().len());
+        assert_eq!(1, source_c2.regex_finds.as_ref().unwrap().len());
     }
 }
