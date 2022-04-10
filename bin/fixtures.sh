@@ -26,11 +26,11 @@ echo '{
     "vars": {
         "%num%": {
             "type": "int",
-            "format": "S%02d"
+            "format": "N%02d"
         },
         "%char%": {
             "type": "int",
-            "format": "S%02d"
+            "format": "C%s"
         }
     },
     "finds": {

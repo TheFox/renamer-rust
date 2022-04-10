@@ -18,6 +18,7 @@ use crate::colors::NO_COLOR;
 use crate::colors::RED;
 use crate::colors::BLUE;
 use crate::colors::GREEN;
+use crate::colors::YELLOW;
 use crate::config::Config;
 use crate::stats::Stats;
 
@@ -90,25 +91,31 @@ impl Renamer {
                     println!("  -> config2: {:?} {}", _config2, _config2.exists());
 
                     let local_config: Option<Config> = if (&_config1).exists() {
-                        println!("-> read config1");
+                        println!("  -> read config1");
                         Some(Config::from_path_buf(_config1))
                     } else if (&_config2).exists() {
-                        println!("-> read config2");
+                        println!("  -> read config2");
                         Some(Config::from_path_buf(_config2))
                     }
                     else { None };
 
                     let merged_config: Config = match local_config {
                         Some(_config) => {
-                            println!("{}-> merge config: {:?}{}", BLUE, _config, NO_COLOR);
                             if _config.is_root() {
+                                println!("{}  -> take local config{}", BLUE, NO_COLOR);
                                 _config
                             } else {
+                                println!("{}  -> merge config{}", BLUE, NO_COLOR);
                                 self.config.merge(&_config)
                             }
                         },
-                        None => self.config.clone(),
+                        None => {
+                            println!("{}  -> clone config: {:?}{}", BLUE, self.config, NO_COLOR);
+                            self.config.clone()
+                        },
                     };
+
+                    println!("{}  -> merged config: {:?}{}", YELLOW, merged_config, NO_COLOR);
 
                     match read_dir(_ppath) {
                         Ok(_files) => {
@@ -116,8 +123,8 @@ impl Renamer {
                                 match _file {
                                     Ok(_entry) => {
                                         println!("{}-> file: {:?} {:?}{}", GREEN, _entry, _entry.path().file_name(), NO_COLOR);
-                                        let mut file_name: String;
-                                        // println!("-> file_name: {:?}", file_name);
+
+                                        let file_name: String;
                                         match _entry.path().file_name() {
                                             Some(_file_name) => {
                                                 if _file_name == "renamer.json" || _file_name == ".renamer.json" {
@@ -131,6 +138,9 @@ impl Renamer {
                                                 continue 'files_loop
                                             },
                                         }
+
+                                        println!("-> file name: '{}'", file_name);
+
                                         match _entry.metadata() {
                                             Ok(_metadata) => {
                                                 // println!("-> metadata: {:?}", _metadata);
@@ -149,10 +159,11 @@ impl Renamer {
                                                     println!("  -> is file");
                                                     stats.files += 1;
 
+                                                    let ext: String;
                                                     match _entry.path().extension() {
                                                         Some(_ext) => {
-                                                            // dbg!(&merged_config);
-                                                            if !merged_config.has_ext(_ext.to_str().unwrap().to_string()) {
+                                                            ext = _ext.to_str().unwrap().to_string();
+                                                            if !merged_config.has_ext(&ext) {
                                                                 println!("  -> not contains ext: {:?}", _ext);
                                                                 println!("{}  -> skip{}", BLUE, NO_COLOR);
                                                                 continue 'files_loop;
@@ -164,19 +175,28 @@ impl Renamer {
                                                         },
                                                     }
 
-                                                    println!("  -> check regex");
+                                                    let mut name = merged_config.name();
+                                                    println!("  -> name A: '{}'", name);
+                                                    name.replace("%ext%", &ext);
+                                                    println!("  -> name B: '{}'", name);
 
+                                                    println!("  -> check regex");
                                                     'finds_loop: for (regex, vars) in merged_config.regex_finds() {
                                                         println!("  -> find: {:?}", regex);
                                                         match regex.captures(&file_name) {
                                                             Some(caps) => {
-                                                                println!("  -> caps: {:?}", caps);
+                                                                // println!("  -> caps: {:?}", caps);
                                                                 let mut i = 1;
                                                                 for var in vars {
-                                                                    println!("  -> var: #{} {:?} => {}", i, var, &caps[i]);
-                                                                    merged_config.format_var(var, caps[i].to_string());
+                                                                    let value = merged_config.format_var(var.clone(), caps[i].to_string());
+                                                                    name.replace(&var, &value);
+                                                                    println!("  -> name C: '{}'", name);
+                                                                    println!("  -> var: #{} {:?} => {} '{}'",
+                                                                        i, var, &caps[i], value);
                                                                     i += 1;
                                                                 }
+
+                                                                // Break loop after the first regex match.
                                                                 break 'finds_loop;
                                                             },
                                                             None => {
@@ -195,7 +215,7 @@ impl Renamer {
                                                 }
                                             },
                                             Err(_error) => {
-                                                println!("{}-> No metadata available for {:?}: {}{}", RED, _entry, _error, NO_COLOR);
+                                                println!("{}-> no metadata available for {:?}: {}{}", RED, _entry, _error, NO_COLOR);
                                                 stats.errors += 1;
                                             },
                                         }

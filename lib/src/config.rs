@@ -84,15 +84,18 @@ impl Var {
         match &self.format {
             Some(_format) => {
                 lazy_static! {
-                    static ref re: Regex = Regex::new(r"%\d+.").unwrap();
+                    static ref re: Regex = Regex::new(r"%(\d+)?.").unwrap();
                 }
                 let caps = re.captures(&_format).unwrap();
+                // println!("-> caps: {:?}", caps);
                 let _formatted = match &caps[0] {
                     "%02d" | "%02s" => format!("{:0>2}", value),
                     "%03d" | "%03s" => format!("{:0>3}", value),
 
                     "%2d" | "%2s" => format!("{:>2}", value),
                     "%3d" | "%3s" => format!("{:>3}", value),
+
+                    "%d" | "%s" => format!("{}", value),
 
                     _ => panic!("format not implemented: {}", _format),
                 };
@@ -136,6 +139,7 @@ pub struct Config {
 
 impl Config {
     pub fn new() -> Self {
+        // println!("{}-> Config::new(){}", BLUE, NO_COLOR);
         Self {
             root: None,
             errors: None,
@@ -148,7 +152,7 @@ impl Config {
     }
 
     pub fn from_str(s: &String) -> Self {
-        println!("{}-> Config::from_str(){}", BLUE, NO_COLOR);
+        // println!("{}-> Config::from_str(){}", BLUE, NO_COLOR);
         let mut c: Self = from_str(s).expect("JSON was not well-formatted");
         c.setup();
         c
@@ -172,7 +176,7 @@ impl Config {
     }
 
     fn setup(&mut self) {
-        println!("{}-> Config::setup(){}", BLUE, NO_COLOR);
+        // println!("{}-> Config::setup(){}", BLUE, NO_COLOR);
 
         self.setup_regex_finds();
     }
@@ -181,7 +185,7 @@ impl Config {
         if let Some(_finds) = &self.finds {
             let mut regex_finds = RegexFinds::new();
             for (regex_s, vars_a) in _finds {
-                println!("-> setup: {:?}", regex_s);
+                // println!("-> setup: {:?}", regex_s);
 
                 match Regex::new(regex_s) {
                     Result::Ok(_r) => {
@@ -284,7 +288,7 @@ impl Config {
     }
 
     pub fn merge(&self, other: &Self) -> Self {
-        println!("{}-> merge{}", BLUE, NO_COLOR);
+        // println!("{}-> Config::merge(){}", BLUE, NO_COLOR);
 
         let mut config = Config::new();
 
@@ -292,18 +296,20 @@ impl Config {
         if let Some(_root) = &other.root {
             println!("{}-> merge root: {:?}{}", BLUE, _root, NO_COLOR);
             // config.root = Some(*_root);
+            panic!("not implemented");
         }
 
         // Errors
         if let Some(_errors) = &other.errors {
             println!("{}-> merge errors: {:?}{}", BLUE, _errors, NO_COLOR);
             // config.errors = Some(*_errors);
+            panic!("not implemented");
         }
 
         // Name
         if let Some(_name) = &other.name {
             println!("{}-> merge name: {:?}{}", BLUE, _name, NO_COLOR);
-            // config.name = Some(_name.to_string());
+            config.name = Some(_name.clone());
         }
 
         // Exts
@@ -322,12 +328,10 @@ impl Config {
         config
     }
 
-    pub fn has_ext(&self, ext: String) -> bool {
-        // println!("-> Config::has_ext()");
-        // println!("-> self.exts: {:?}", self.exts);
+    pub fn has_ext(&self, ext: &String) -> bool {
         match &self.exts {
             Some(_exts) => {
-                _exts.contains(&ext)
+                _exts.contains(ext)
             },
             None => false,
         }
@@ -350,7 +354,7 @@ impl Config {
     pub fn name(&self) -> String {
         match &self.name {
             Some(name) => name.clone(),
-            None => panic!("config doesn't have a name"),
+            None => panic!("Config doesn't have a name"),
         }
     }
 
@@ -372,10 +376,10 @@ impl Config {
                     Some(_var) => {
                         _var.format(value)
                     },
-                    None => panic!("variable not found: {}", name),
+                    None => panic!("Cariable not found: {}", name),
                 }
             },
-            None => panic!("no variables defined"),
+            None => panic!("No variables defined in Config"),
         }
 
     }
