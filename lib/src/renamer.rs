@@ -29,6 +29,25 @@ fn print_type_of<T>(_: &T) {
     println!("{}", std::any::type_name::<T>())
 }
 
+fn read_local_config(path: &Path) -> Option<Config> {
+    let _config1 = path.join("renamer.json");
+    let _config2 = path.join(".renamer.json");
+
+    println!("  -> config1: {:?} {}", _config1, _config1.exists());
+    println!("  -> config2: {:?} {}", _config2, _config2.exists());
+
+    if (&_config1).exists() {
+        println!("  -> read config1");
+        Some(Config::from_path_buf(_config1))
+    } else if (&_config2).exists() {
+        println!("  -> read config2");
+        Some(Config::from_path_buf(_config2))
+    }
+    else {
+        None
+    }
+}
+
 pub struct Renamer {
     config: Config,
     limit: Limit,
@@ -39,9 +58,7 @@ pub struct Renamer {
 impl Renamer {
     pub fn new(config: Config, limit: Limit, dryrun: bool) -> Self {
         #[cfg(debug_assertions)]
-        println!("-> Renamer::new()");
-
-        // dbg!(&config);
+        println!("-> Renamer::new({:?}, {})", limit, dryrun);
 
         Self {
             config: config,
@@ -55,8 +72,6 @@ impl Renamer {
         #[cfg(debug_assertions)]
         println!("-> Renamer::traverse({})", level);
 
-        // dbg!(&config);
-
         Self {
             config: config,
             limit: limit,
@@ -65,10 +80,28 @@ impl Renamer {
         }
     }
 
+    fn get_merged_config(&self, path: &Path) -> Config {
+        // let local_config: Option<Config> = read_local_config(path);
+        match read_local_config(path) {
+            Some(_config) => {
+                if _config.is_root() {
+                    println!("{}  -> take local config{}", BLUE, NO_COLOR);
+                    _config
+                } else {
+                    println!("{}  -> merge config{}", BLUE, NO_COLOR);
+                    self.config.merge(&_config)
+                }
+            },
+            None => {
+                println!("{}  -> clone config: {:?}{}", BLUE, self.config, NO_COLOR);
+                self.config.clone()
+            },
+        }
+    }
+
     pub fn rename(&self, paths: Paths) -> Stats {
         if cfg!(debug_assertions) {
             println!("-> Renamer::rename(l={}, {:?})", self.level, paths);
-            // dbg!(self.config);
         }
 
         let mut stats = Stats::new();
@@ -83,38 +116,9 @@ impl Renamer {
                 'paths_loop: for _path in &_paths {
                     let _ppath = &String::from(_path);
                     let _ppath = Path::new(OsStr::new(_ppath));
-
-                    let _config1 = _ppath.join("renamer.json");
-                    let _config2 = _ppath.join(".renamer.json");
-
                     println!("-> path: {:?}", _ppath);
-                    println!("  -> config1: {:?} {}", _config1, _config1.exists());
-                    println!("  -> config2: {:?} {}", _config2, _config2.exists());
 
-                    let local_config: Option<Config> = if (&_config1).exists() {
-                        println!("  -> read config1");
-                        Some(Config::from_path_buf(_config1))
-                    } else if (&_config2).exists() {
-                        println!("  -> read config2");
-                        Some(Config::from_path_buf(_config2))
-                    }
-                    else { None };
-
-                    let merged_config: Config = match local_config {
-                        Some(_config) => {
-                            if _config.is_root() {
-                                println!("{}  -> take local config{}", BLUE, NO_COLOR);
-                                _config
-                            } else {
-                                println!("{}  -> merge config{}", BLUE, NO_COLOR);
-                                self.config.merge(&_config)
-                            }
-                        },
-                        None => {
-                            println!("{}  -> clone config: {:?}{}", BLUE, self.config, NO_COLOR);
-                            self.config.clone()
-                        },
-                    };
+                    let merged_config: Config = self.get_merged_config(&_ppath);
 
                     println!("{}  -> merged config: {:?}{}", YELLOW, merged_config, NO_COLOR);
 
@@ -250,9 +254,8 @@ impl Renamer {
                             println!("{}  dest: {}{}", GREEN, new_file_path.display(), NO_COLOR);
 
                             if !self.dryrun {
-                                // TODO: rename file here
                                 if cfg!(feature="production") {
-                                    // rename();
+                                    // println!("{}   move{}", RED, NO_COLOR); rename(path, new_file_path);
                                 }
                                 stats += 1;
                             }

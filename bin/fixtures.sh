@@ -4,6 +4,8 @@ SCRIPT_BASEDIR=$(dirname "$0")
 
 cd "${SCRIPT_BASEDIR}/.."
 
+rm -r tmp/
+
 mkdir -p tmp/test1
 mkdir -p tmp/test2/test3
 

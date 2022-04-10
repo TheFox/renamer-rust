@@ -105,9 +105,7 @@ fn main() -> IoResult<()> {
                 }
             },
             "-n" | "--dryrun" => {
-                if let Some(_next) = next {
-                    app.dryrun = true;
-                }
+                app.dryrun = true;
             },
             "--verbose" => {
                 if let Some(_next) = next {
