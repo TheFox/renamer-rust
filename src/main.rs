@@ -12,6 +12,11 @@ use renamer_lib::config::Config;
 mod app;
 use crate::app::App;
 
+#[cfg(debug_assertions)]
+fn print_type_of<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
+}
+
 fn print_app_info() {
     println!("{} v{} ({})", APP_NAME, APP_VERSION, APP_BUILD_AT);
     println!("{}", APP_AUTHORS);
@@ -129,16 +134,11 @@ fn main() -> IoResult<()> {
         println!("-> app.verbose: {:?}", app.verbose);
     }
 
+    // Config
     let config = Config::from_config_path(app.config);
-    // dbg!(&config);
 
+    // Renamer
     let renamer = Renamer::new(config, app.limit, app.dryrun);
-
-    if cfg!(feature="test1") {
-        renamer.test1();
-    } else {
-        println!("no test1");
-    }
 
     let stats = renamer.rename(app.paths);
     println!("-> dirs:     {}", stats.dirs);
@@ -152,12 +152,4 @@ fn main() -> IoResult<()> {
     println!("-> end");
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests_base {
-    #[test]
-    fn test1() {
-        assert!(true);
-    }
 }

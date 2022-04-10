@@ -28,6 +28,7 @@ type FindsOption = Option<Finds>;
 type RegexFinds = Vec<(Regex, Vec<String>)>;
 type RegexFindsOption = Option<RegexFinds>;
 
+#[cfg(debug_assertions)]
 fn print_type_of<T>(_: &T) {
     println!("{}", std::any::type_name::<T>())
 }
@@ -80,29 +81,70 @@ impl Var {
         }
     }
 
-    fn format(&self, value: String) -> String {
-        match &self.format {
-            Some(_format) => {
-                lazy_static! {
-                    static ref re: Regex = Regex::new(r"%(\d+)?.").unwrap();
-                }
-                let caps = re.captures(&_format).unwrap();
-                // println!("-> caps: {:?}", caps);
-                let _formatted = match &caps[0] {
-                    "%02d" | "%02s" => format!("{:0>2}", value),
-                    "%03d" | "%03s" => format!("{:0>3}", value),
-
-                    "%2d" | "%2s" => format!("{:>2}", value),
-                    "%3d" | "%3s" => format!("{:>3}", value),
-
-                    "%d" | "%s" => format!("{}", value),
-
-                    _ => panic!("format not implemented: {}", _format),
-                };
-                _format.replace(&caps[0], &_formatted)
-            },
-            None => panic!("no format defined for variable")
+    fn format(&self, ovalue: String) -> String {
+        lazy_static! {
+            static ref re: Regex = Regex::new(r"%(\d+)?.").unwrap();
         }
+
+        let vtype: &str = match &self.vtype {
+            Some(_vtype) => {
+                &_vtype
+                // match _vtype {
+                //     "int" => 'd',
+                //     "str" => 's',
+                //     _ => panic!("Type not implemented: {}", _vtype),
+                // }
+            },
+            None => panic!("Cannot format variable because no type was povieded"),
+        };
+
+        let format = match &self.format {
+            Some(_format) => {
+                _format
+            },
+            None => panic!("No format defined for variable"),
+        };
+
+        // println!("-> vtype: '{}'", vtype);
+        // println!("-> format: '{}'", format);
+
+        let caps = re.captures(&format).unwrap();
+        // println!("-> caps: {:?}", caps);
+
+        let fvalue = match vtype {
+            "int" => {
+                match &caps[0] {
+                    "%02d" => format!("{:0>2}", ovalue),
+                    "%03d" => format!("{:0>3}", ovalue),
+
+                    "%2d" => format!("{:>2}", ovalue),
+                    "%3d" => format!("{:>3}", ovalue),
+
+                    "%d" => format!("{}", ovalue),
+
+                    _ => panic!("Format not implemented for {}: {}", vtype, format),
+                }
+            },
+            "str" => {
+                match &caps[0] {
+                    "%02s" => format!("{:0>2}", ovalue),
+                    "%03s" => format!("{:0>3}", ovalue),
+
+                    "%2s" => format!("{:>2}", ovalue),
+                    "%3s" => format!("{:>3}", ovalue),
+
+                    "%s" => format!("{}", ovalue),
+
+                    _ => panic!("Format not implemented for {}: {}", vtype, format),
+                }
+            },
+            _ => panic!("Type not implemented: {}", vtype),
+        };
+
+        // println!("-> fvalue: '{}'", fvalue);
+
+        format.replace(&caps[0], &fvalue)
+        // String::new()
     }
 
     pub fn format_s(&self, value: &str) -> String {
