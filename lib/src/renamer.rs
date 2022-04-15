@@ -21,6 +21,7 @@ use crate::colors::BLUE;
 use crate::colors::GREEN;
 use crate::colors::YELLOW;
 use crate::config::Config;
+use crate::config::ConfigOption;
 use crate::stats::Stats;
 
 #[cfg(debug_assertions)]
@@ -28,23 +29,82 @@ fn print_type_of<T>(_: &T) {
     println!("{}", std::any::type_name::<T>())
 }
 
-fn read_local_config(path: &Path) -> Option<Config> {
+fn read_local_config(path: &Path) -> ConfigOption {
     let _config1 = path.join("renamer.json");
     let _config2 = path.join(".renamer.json");
 
-    println!("  -> config1: {:?} {}", _config1, _config1.exists());
-    println!("  -> config2: {:?} {}", _config2, _config2.exists());
-
     if (&_config1).exists() {
-        println!("  -> read config1");
         Some(Config::from_path_buf(_config1))
     } else if (&_config2).exists() {
-        println!("  -> read config2");
         Some(Config::from_path_buf(_config2))
     }
     else {
         None
     }
+}
+
+fn find_root_config(path: &Path, level: u64) -> ConfigOption {
+    println!("-> find_root_config({:?}, {})", path, level);
+
+    match path.parent() {
+        Some(parent) => {
+            match read_local_config(&parent) {
+                Some(_config) => {
+                    if _config.is_root() {
+                        // println!("  -> found root config A: {:?} {}", path, level);
+                        Some(_config)
+                    } else {
+                        let config_o = find_root_config(&parent, level + 1);
+                        if config_o.is_some() {
+                            // println!("  -> found root config B: {:?} {}", path, level);
+                            config_o
+                        } else {
+                            // println!("  -> found root config C: {:?} {} -> {}", path, level, _config.name());
+                            Some(_config)
+                        }
+                    }
+                },
+                None => {
+                    // println!("  -> found root config D: {:?} {}", path, level);
+                    find_root_config(&parent, level + 1)
+                },
+            }
+        },
+        None => {
+            // println!("  -> found root config E: {:?} {}", path, level);
+            None
+        },
+    }
+}
+
+fn merge_child_configs(path: &Path) -> Config {
+    println!("-> merge_child_configs({:?})", path);
+
+    let mut paths: Vec<&Path> = vec![];
+
+    let mut ancestors = path.ancestors();
+
+    for _path in path.ancestors() {
+        if _path.display().to_string().len() > 0 {
+            paths.insert(0, _path);
+        } else {
+            paths.insert(0, &Path::new("."));
+        }
+    }
+
+    let mut merged_config = Config::new();
+    for _path in paths {
+        println!("-> path: {:?}", _path);
+
+        match read_local_config(&_path) {
+            Some(local_config) => {
+                println!("  -> merge config: {:?}", _path);
+                merged_config = merged_config.merge(&local_config);
+            },
+            None => {},
+        }
+    }
+    merged_config
 }
 
 pub struct Renamer {
@@ -93,7 +153,7 @@ impl Renamer {
                 }
             },
             None => {
-                println!("{}    -> clone config: {:?}{}", BLUE, self.config, NO_COLOR);
+                println!("{}    -> clone config: {:?}{}", BLUE, self.config.is_initialized(), NO_COLOR);
                 self.config.clone()
             },
         }
@@ -116,11 +176,27 @@ impl Renamer {
                 'paths_loop: for _path in &_paths {
                     let _ppath = &String::from(_path);
                     let _ppath = Path::new(OsStr::new(_ppath));
-                    println!("-> path: {:?}", _ppath);
+                    println!("{}-> path: {:?}{}", BLUE, _ppath, NO_COLOR);
 
-                    let merged_config: Config = self.get_merged_config(&_ppath);
+                    let mut merged_config: Config = self.get_merged_config(&_ppath);
+                    if !merged_config.is_initialized() {
+                        println!("  -> config is not initialized");
 
-                    println!("{}  -> merged config: {:?}{}", YELLOW, merged_config, NO_COLOR);
+                        let root_config = find_root_config(&_ppath, 0);
+                        match root_config {
+                            Some(_root_config) => {
+                                println!("  -> root config is some: {:?}", _root_config.name());
+                                merged_config = merge_child_configs(&_ppath);
+                                dbg!(&merged_config);
+                            },
+                            None => {
+                                println!("  -> no root config");
+                                panic!("No config provided");
+                            },
+                        }
+                    }
+
+                    println!("{}  -> merged config: {:?}{}", YELLOW, merged_config.is_initialized(), NO_COLOR);
 
                     let files: ReadDir = match read_dir(_ppath) {
                         Ok(_files) => _files,

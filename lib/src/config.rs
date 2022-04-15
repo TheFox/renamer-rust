@@ -24,6 +24,7 @@ type Finds = HashMap<String, Vec<String>>;
 type FindsOption = Option<Finds>;
 type RegexFinds = Vec<(Regex, Vec<String>)>;
 type RegexFindsOption = Option<RegexFinds>;
+pub type ConfigOption = Option<Config>;
 
 #[cfg(debug_assertions)]
 fn print_type_of<T>(_: &T) {
@@ -147,6 +148,9 @@ impl Var {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
+    #[serde(skip_deserializing)]
+    is_initialized: bool,
+
     root: Option<bool>,
     errors: Option<bool>,
     name: Option<String>,
@@ -164,6 +168,7 @@ impl Config {
     pub fn new() -> Self {
         // println!("{}-> Config::new(){}", BLUE, NO_COLOR);
         Self {
+            is_initialized: false,
             root: None,
             errors: None,
             name: None,
@@ -201,6 +206,7 @@ impl Config {
     fn setup(&mut self) {
         // println!("{}-> Config::setup(){}", BLUE, NO_COLOR);
 
+        self.is_initialized = true;
         self.setup_regex_finds();
     }
 
@@ -316,16 +322,16 @@ impl Config {
 
         // Root
         if let Some(_root) = &other.root {
-            println!("{}-> merge root: {:?}{}", BLUE, _root, NO_COLOR);
+            // println!("{}-> merge root: {:?}{}", BLUE, _root, NO_COLOR);
             // config.root = Some(*_root);
-            panic!("not implemented");
+            panic!("not implemented: merge root field");
         }
 
         // Errors
         if let Some(_errors) = &other.errors {
-            println!("{}-> merge errors: {:?}{}", BLUE, _errors, NO_COLOR);
+            // println!("{}-> merge errors: {:?}{}", BLUE, _errors, NO_COLOR);
             // config.errors = Some(*_errors);
-            panic!("not implemented");
+            panic!("not implemented: merge errors field");
         }
 
         // Name
@@ -351,11 +357,8 @@ impl Config {
     }
 
     pub fn has_ext(&self, ext: &String) -> bool {
-        println!("-> Config::has_ext({}) -> {:?}", ext, self.exts);
         match &self.exts {
-            Some(_exts) => {
-                _exts.contains(ext)
-            },
+            Some(_exts) => _exts.contains(ext),
             None => false,
         }
     }
@@ -406,6 +409,10 @@ impl Config {
         }
 
     }
+
+    pub fn is_initialized(&self) -> bool {
+        self.is_initialized
+    }
 }
 
 #[cfg(test)]
@@ -436,7 +443,7 @@ mod tests_var {
 
     #[test]
     fn test_var_format() {
-        let v1 = Var::from("v1".into(), "S%2s".into());
+        let v1 = Var::from("str".into(), "S%2s".into());
         assert_eq!("S 1".to_string(), v1.format_s("1"));
         assert_eq!("S10".to_string(), v1.format_s("10"));
         assert_eq!("S100".to_string(), v1.format_s("100"));
@@ -444,7 +451,7 @@ mod tests_var {
 
     #[test]
     fn test_var_format1() {
-        let v1 = Var::from("v1".into(), "S%02s".into());
+        let v1 = Var::from("str".into(), "S%02s".into());
         assert_eq!("S01".to_string(), v1.format_s("1"));
         assert_eq!("S10".to_string(), v1.format_s("10"));
         assert_eq!("S100".to_string(), v1.format_s("100"));
@@ -452,7 +459,7 @@ mod tests_var {
 
     #[test]
     fn test_var_format2() {
-        let v1 = Var::from("v1".into(), "S%03s".into());
+        let v1 = Var::from("str".into(), "S%03s".into());
         assert_eq!("S001".to_string(), v1.format_s("1"));
         assert_eq!("S010".to_string(), v1.format_s("10"));
         assert_eq!("S100".to_string(), v1.format_s("100"));
