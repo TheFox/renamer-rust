@@ -80,19 +80,20 @@ impl Renamer {
     }
 
     fn get_merged_config(&self, path: &Path) -> Config {
-        // let local_config: Option<Config> = read_local_config(path);
+        println!("-> Renamer::get_merged_config({:?})", path);
+
         match read_local_config(path) {
             Some(_config) => {
                 if _config.is_root() {
-                    println!("{}  -> take local config{}", BLUE, NO_COLOR);
+                    println!("{}    -> take local config{}", BLUE, NO_COLOR);
                     _config
                 } else {
-                    println!("{}  -> merge config{}", BLUE, NO_COLOR);
+                    println!("{}    -> merge config{}", BLUE, NO_COLOR);
                     self.config.merge(&_config)
                 }
             },
             None => {
-                println!("{}  -> clone config: {:?}{}", BLUE, self.config, NO_COLOR);
+                println!("{}    -> clone config: {:?}{}", BLUE, self.config, NO_COLOR);
                 self.config.clone()
             },
         }
@@ -191,7 +192,7 @@ impl Renamer {
                             };
 
                             if !merged_config.has_ext(&ext) {
-                                println!("{}  -> skip, wrong ext{}", BLUE, NO_COLOR);
+                                println!("{}  -> skip, wrong ext: '{}'{}", BLUE, &ext, NO_COLOR);
                                 continue 'files_loop;
                             }
 

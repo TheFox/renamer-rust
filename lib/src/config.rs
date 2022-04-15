@@ -351,6 +351,7 @@ impl Config {
     }
 
     pub fn has_ext(&self, ext: &String) -> bool {
+        println!("-> Config::has_ext({}) -> {:?}", ext, self.exts);
         match &self.exts {
             Some(_exts) => {
                 _exts.contains(ext)
