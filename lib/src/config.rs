@@ -4,13 +4,10 @@ use std::fs::read_to_string;
 use std::path::PathBuf;
 use std::collections::HashMap;
 use regex::Regex;
-// use sprintf::sprintf;
-// use dynfmt::{Format, NoopFormat};
 use lazy_static::lazy_static;
 
 use serde::Serialize;
 use serde::Deserialize;
-// use serde_json::Result;
 use serde_json::from_str;
 use serde_json::Value;
 
@@ -87,29 +84,16 @@ impl Var {
         }
 
         let vtype: &str = match &self.vtype {
-            Some(_vtype) => {
-                &_vtype
-                // match _vtype {
-                //     "int" => 'd',
-                //     "str" => 's',
-                //     _ => panic!("Type not implemented: {}", _vtype),
-                // }
-            },
+            Some(_vtype) => &_vtype,
             None => panic!("Cannot format variable because no type was povieded"),
         };
 
         let format = match &self.format {
-            Some(_format) => {
-                _format
-            },
+            Some(_format) => _format,
             None => panic!("No format defined for variable"),
         };
 
-        // println!("-> vtype: '{}'", vtype);
-        // println!("-> format: '{}'", format);
-
         let caps = re.captures(&format).unwrap();
-        // println!("-> caps: {:?}", caps);
 
         let fvalue = match vtype {
             "int" => {
@@ -141,10 +125,7 @@ impl Var {
             _ => panic!("Type not implemented: {}", vtype),
         };
 
-        // println!("-> fvalue: '{}'", fvalue);
-
         format.replace(&caps[0], &fvalue)
-        // String::new()
     }
 
     pub fn format_s(&self, value: &str) -> String {
@@ -227,7 +208,6 @@ impl Config {
         if let Some(_finds) = &self.finds {
             let mut regex_finds = RegexFinds::new();
             for (regex_s, vars_a) in _finds {
-                // println!("-> setup: {:?}", regex_s);
 
                 match Regex::new(regex_s) {
                     Result::Ok(_r) => {

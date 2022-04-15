@@ -8,7 +8,6 @@ use std::path::PathBuf;
 use std::ffi::OsStr;
 use std::error::Error;
 use std::result::Result;
-// use std::io::prelude::*;
 use std::fs::FileType;
 use std::os::unix::fs::MetadataExt;
 
@@ -123,11 +122,7 @@ impl Renamer {
                     println!("{}  -> merged config: {:?}{}", YELLOW, merged_config, NO_COLOR);
 
                     let files: ReadDir = match read_dir(_ppath) {
-                        Ok(_files) => {
-                            _files
-                            // print_type_of(_files);
-
-                        },
+                        Ok(_files) => _files,
                         Err(_error) => {
                             println!("{}-> read dir ERROR: {}: {}{}", RED, _error.to_string(), _path, NO_COLOR);
                             stats.errors += 1;
@@ -212,7 +207,6 @@ impl Renamer {
                                 println!("  -> find: {:?}", regex);
                                 match regex.captures(&file_name) {
                                     Some(caps) => {
-                                        // println!("  -> caps: {:?}", caps);
                                         let mut i = 1;
                                         for var in vars {
                                             let value = merged_config.format_var(var.clone(), caps[i].to_string());
