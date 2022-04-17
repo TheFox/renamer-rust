@@ -30,12 +30,12 @@ fn print_usage() {
     println!();
     println!("Options:");
     println!("  -h|--help                Show help.");
+    println!("  -V|--version             Show version.");
     println!("  -c|--config <path>       Path to config file.");
-    println!("  -p|--path <path>         Path to root directory. Multiple -p arguments possible.");
+    println!("  -p|--path <path>         Path to root directory. Multiple `-p`s possible.");
     println!("  -l|--limit <count>       Limit files to rename.");
     println!("  -n|--dryrun              Do not change anything.");
-    // println!("     --print               Print config.");
-    println!("  --verbose <level>        Verbose Levels: 0,1,2,3");
+    println!("  -v|--verbose <level>     Verbose Levels: 1,2,3");
     println!("  -v|-vv|-vvv              Verbose");
 }
 
@@ -115,7 +115,18 @@ fn main() -> IoResult<()> {
                     skip_next = true;
                 }
             },
-            "-v" => { app.verbose = 1; },
+            "-v" => {
+                app.verbose = 1;
+
+                if let Some(_next) = next {
+                    // dbg!(&_next);
+                    if let ResResult::Ok(_next) = _next.parse::<u8>() {
+                        app.verbose = _next;
+                        skip_next = true;
+                    }
+                    // else { println!("-> failed to parse: '{}'", _next); }
+                }
+            },
             "-vv" => { app.verbose = 2; },
             "-vvv" => { app.verbose = 3; },
             _ => panic!("Unrecognized argument: {}", arg),
@@ -134,17 +145,19 @@ fn main() -> IoResult<()> {
     let config = Config::from_config_path(app.config);
 
     // Renamer
-    let renamer = Renamer::new(config, app.limit, app.dryrun);
+    let renamer = Renamer::new(config, app.limit, app.dryrun, app.verbose);
 
     let stats = renamer.rename(app.paths);
-    println!("---------------");
-    println!("-> dirs:     {}", stats.dirs);
-    println!("-> files:    {}", stats.files);
-    println!("-> renamed:  {}", stats.renamed);
-    println!("-> errors:   {}", stats.errors);
-    println!("-> warnings: {}", stats.warnings);
-    println!("-> rest:     {:?}", stats.rest);
-    println!("---------------");
+    if app.verbose >= 1 {
+        println!("---------------");
+        println!("-> dirs:     {}", stats.dirs);
+        println!("-> files:    {}", stats.files);
+        println!("-> renamed:  {}", stats.renamed);
+        println!("-> errors:   {}", stats.errors);
+        println!("-> warnings: {}", stats.warnings);
+        println!("-> rest:     {:?}", stats.rest);
+        println!("---------------");
+    }
 
     #[cfg(debug_assertions)]
     println!("-> end");

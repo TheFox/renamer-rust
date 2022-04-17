@@ -17,6 +17,30 @@ TODO
 ./bin/dev.sh -c ./config.json -p tmp/test2 -l 1 -n
 ```
 
+## Arguments
+
+| Name | Description |
+|---|---|
+| `-h` or `--help` | Show help. |
+| `-V` or `--version` | Show version. |
+| `-c` or `--config` | Path to main config. |
+| `-p` or `--path` | Path to root directory. Multiple `-p`s possible. At least one `--path` has to be provided. Otherwise renamer will not to anything. |
+| `-l` or `--limit` | Limit the files to consider for renaming. |
+| `-n` or `--dryrun` | Do not change anything. Only print what would happen. |
+| `-v` or `--verbose` | Verbose Levels: 1,2,3 |
+| `-v` | Verbose Level 1 |
+| `-vv` | Verbose Level 2 |
+| `-vvv` | Verbose Level 3 |
+
+For example
+
+```bash
+renamer --path /path/to/dir1
+renamer --path /path/to/dir1 --path /path/to/dir2
+
+renamer --config ./renamer.json --path /path/to/dir1 --path /path/to/dir2 --limit 10 --verbose 3 --dryrun
+```
+
 ## Config Data Structure
 
 ### Example

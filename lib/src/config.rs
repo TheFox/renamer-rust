@@ -1,6 +1,7 @@
 
 use core::result::Result;
 use std::fs::read_to_string;
+use std::path::Path;
 use std::path::PathBuf;
 use std::collections::HashMap;
 use regex::Regex;
@@ -193,7 +194,7 @@ impl Config {
     }
 
     pub fn from_config_path(config_path: ConfigPath) -> Self {
-        println!("{}-> config path: {:?}{}", BLUE, config_path, NO_COLOR);
+        // println!("{}-> config path: {:?}{}", BLUE, config_path, NO_COLOR);
         match config_path {
             Some(_config_path) => Self::from_path(_config_path),
             None => Self::new(),
@@ -407,6 +408,28 @@ impl Config {
 
     pub fn is_initialized(&self) -> bool {
         self.is_initialized
+    }
+
+    pub fn path_has_var(&self, path: &Path) -> bool {
+        // println!("{}-> Config::path_has_var({:?}){}", BLUE, path, NO_COLOR);
+
+        let path_s: String = path.display().to_string();
+
+        match &self.vars {
+            Some(_vars) => {
+                // println!("-> vars: {:?}", _vars);
+                // println!("-> keys: {:?}", _vars.keys());
+                for var_name in _vars.keys() {
+                    // println!("-> var: {:?}", var_name);
+                    if path_s.contains(var_name) {
+                        return true;
+                    }
+                }
+            },
+            None => {},
+        }
+
+        false
     }
 }
 

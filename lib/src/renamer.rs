@@ -10,6 +10,7 @@ use std::error::Error;
 use std::result::Result;
 use std::fs::FileType;
 use std::os::unix::fs::MetadataExt;
+use log::debug;
 
 use crate::types::ConfigPath;
 use crate::types::Paths;
@@ -153,11 +154,12 @@ pub struct Renamer {
     config: Config,
     limit: Limit,
     dryrun: bool,
+    verbose: u8,
     level: u64,
 }
 
 impl Renamer {
-    pub fn new(config: Config, limit: Limit, dryrun: bool) -> Self {
+    pub fn new(config: Config, limit: Limit, dryrun: bool, verbose: u8) -> Self {
         #[cfg(debug_assertions)]
         println!("-> Renamer::new({:?}, {})", limit, dryrun);
 
@@ -166,10 +168,11 @@ impl Renamer {
             limit: limit,
             dryrun: dryrun,
             level: 0,
+            verbose: 0,
         }
     }
 
-    fn traverse(config: Config, limit: Limit, dryrun: bool, level: u64) -> Self {
+    fn traverse(config: Config, limit: Limit, dryrun: bool, verbose: u8, level: u64) -> Self {
         #[cfg(debug_assertions)]
         println!("-> Renamer::traverse({})", level);
 
@@ -177,6 +180,7 @@ impl Renamer {
             config: config,
             limit: limit,
             dryrun: dryrun,
+            verbose: verbose,
             level: level,
         }
     }
@@ -211,7 +215,7 @@ impl Renamer {
             stats.rest = Some(_limit);
         }
 
-        println!("-> paths: {:?}", paths);
+        // println!("-> paths: {:?}", paths);
 
         match paths {
             Some(_paths) => {
@@ -222,23 +226,30 @@ impl Renamer {
 
                     let mut merged_config: Config = self.get_merged_config(&_ppath);
                     if !merged_config.is_initialized() {
-                        println!("  -> config is not initialized [A]");
+                        // println!("  -> config is not initialized [A]");
 
                         let root_path = find_root_path(&_ppath);
                         merged_config = merge_child_configs(root_path);
 
                         if !merged_config.is_initialized() {
-                            dbg!(merged_config);
+                            debug!("{:?}", merged_config);
                             panic!("No config provided");
                         }
                     }
 
-                    println!("{}  -> merged config: {:?}{}", YELLOW, merged_config.is_initialized(), NO_COLOR);
+                    //println!("{}  -> merged config: {:?}{}", YELLOW, merged_config.is_initialized(), NO_COLOR);
+
+                    if self.verbose >= 3 {
+                        println!("--- config ---");
+                        debug!("{:?}", merged_config);
+                    }
 
                     let files: ReadDir = match read_dir(_ppath) {
                         Ok(_files) => _files,
                         Err(_error) => {
-                            println!("{}-> read dir ERROR: {}: {}{}", RED, _error.to_string(), _path, NO_COLOR);
+                            if self.verbose >= 1 {
+                                println!("{}-> Read Dir ERROR: {}: {}{}", RED, _error.to_string(), _path, NO_COLOR);
+                            }
                             stats.errors += 1;
                             continue 'paths_loop;
                         },
@@ -270,7 +281,7 @@ impl Renamer {
                             },
                         };
 
-                        println!("-> file name: '{}'", file_name);
+                        // println!("-> file name: '{}'", file_name);
 
                         let entry_metadata = match dir_entry.metadata() {
                             Ok(_metadata) => _metadata,
@@ -281,52 +292,60 @@ impl Renamer {
                             },
                         };
 
-                        println!("  -> mode: {:02o}", entry_metadata.mode());
+                        // println!("  -> mode: {:02o}", entry_metadata.mode());
 
                         if entry_metadata.is_dir() {
-                            println!("  -> is dir");
+                            // println!("  -> is dir");
                             stats.dirs += 1;
 
                             let _spaths = Some(vec![dir_entry.path().display().to_string()]);
 
-                            let _renamer = Self::traverse(merged_config.clone(), stats.rest, self.dryrun, self.level + 1);
+                            let _renamer = Self::traverse(merged_config.clone(), stats.rest, self.dryrun, self.verbose, self.level + 1);
                             let _sstats = _renamer.rename(_spaths);
                             stats += _sstats;
                         } else if entry_metadata.is_file() {
-                            println!("  -> is file");
+                            // println!("  -> is file");
                             stats.files += 1;
 
                             let ext: String = match dir_entry.path().extension() {
                                 Some(_ext) => _ext.to_str().unwrap().into(),
                                 None => {
-                                    println!("{}  -> skip, cannot extract extension from path{}", BLUE, NO_COLOR);
+                                    if self.verbose >= 1 {
+                                        println!("{}  -> skip, cannot extract extension from path{}", BLUE, NO_COLOR);
+                                    }
                                     continue 'files_loop;
                                 },
                             };
 
                             if !merged_config.has_ext(&ext) {
-                                println!("{}  -> skip, wrong ext: '{}'{}", BLUE, &ext, NO_COLOR);
+                                if self.verbose >= 1 {
+                                    println!("{}  -> skip, wrong ext: '{}'{}", BLUE, &ext, NO_COLOR);
+                                }
                                 continue 'files_loop;
                             }
 
-                            println!("  -> ext: '{}'", ext);
+                            // println!("  -> ext: '{}'", ext);
 
                             let mut name = merged_config.name();
-                            println!("  -> name A: '{}'", name);
+                            // println!("  -> name A: '{}'", name);
                             name = name.replace("%ext%", &(".".to_owned() + &ext));
-                            println!("  -> name B: '{}'", name);
+                            // println!("  -> name B: '{}'", name);
 
-                            println!("  -> check regex");
+                            // println!("  -> check regex");
                             'finds_loop: for (regex, vars) in merged_config.regex_finds() {
-                                println!("  -> find: {:?}", regex);
+                                // println!("  -> find: {:?}", regex);
                                 match regex.captures(&file_name) {
                                     Some(caps) => {
+                                        // println!("-> caps: {:?}", caps);
+
                                         let mut i = 1;
                                         for var in vars {
                                             let value = merged_config.format_var(var.clone(), caps[i].to_string());
                                             name = name.replace(&var, &value);
-                                            println!("  -> var: #{} {:?} => {} '{}'", i, var, &caps[i], value);
-                                            println!("  -> name C: '{}'", name);
+
+                                            // println!("  -> var: #{} {:?} => {} '{}'", i, var, &caps[i], value);
+                                            // println!("  -> name C: '{}'", name);
+
                                             i += 1;
                                         }
 
@@ -334,50 +353,59 @@ impl Renamer {
                                         break 'finds_loop;
                                     },
                                     None => {
-                                        println!("{}  -> no match: {}{}", BLUE, regex, NO_COLOR);
+                                        // println!("{}  -> no match: {}{}", BLUE, regex, NO_COLOR);
                                     },
                                 }
                             }
 
                             let path = dir_entry.path();
-                            println!("-> path: {:?}", path.parent());
+                            // println!("-> path: {:?}", path.parent());
 
                             let parent = match path.parent() {
                                 Some(_parent) => _parent,
                                 None => panic!("Cannot get parent from path: {:?}", path),
                             };
 
-                            println!("-> parent: {:?}", parent);
+                            // println!("-> parent: {:?}", parent);
 
                             let new_file_path = parent.join(name);
-                            println!("-> new: {:?}", new_file_path);
+                            // println!("-> new: {:?}", new_file_path);
 
                             if new_file_path.exists() {
                                 println!("{}-> skip file, already exists: {}{}", YELLOW, new_file_path.display(), NO_COLOR);
                                 stats.warnings += 1;
                                 continue 'files_loop;
                             }
+                            if merged_config.path_has_var(&new_file_path) {
+                                println!("{}-> skip file, variables not replaced{}", YELLOW, NO_COLOR);
+                                stats.warnings += 1;
+                                continue 'files_loop;
+                            }
 
-                            if self.dryrun {
-                                println!("{}-> move (dry-run){}", GREEN, NO_COLOR);
+                            if self.verbose >= 1 {
+                                if self.dryrun {
+                                    println!("{}-> move (dry-run){}", GREEN, NO_COLOR);
+                                }
+                                else {
+                                    println!("{}-> move{}", GREEN, NO_COLOR);
+                                }
+                                println!("{}   src: {}{}", GREEN, path.display(), NO_COLOR);
+                                println!("{}  dest: {}{}", GREEN, new_file_path.display(), NO_COLOR);
                             }
-                            else {
-                                println!("{}-> move{}", GREEN, NO_COLOR);
-                            }
-                            println!("{}   src: {}{}", GREEN, path.display(), NO_COLOR);
-                            println!("{}  dest: {}{}", GREEN, new_file_path.display(), NO_COLOR);
 
                             if !self.dryrun {
                                 if cfg!(feature="production") {
-                                    println!("{}   move{}", RED, NO_COLOR);
+                                    // println!("{}   move{}", RED, NO_COLOR);
                                     rename(path, new_file_path);
                                 }
                                 stats += 1;
                             }
-                        }
+                        } // entry_metadata.is_file()
 
                         if stats.end() {
-                            println!("{}-> abort, reached limit{}", BLUE, NO_COLOR);
+                            if self.verbose >= 1 {
+                                println!("{}-> abort, reached limit{}", BLUE, NO_COLOR);
+                            }
                             break 'paths_loop;
                         }
                     } // 'files_loop

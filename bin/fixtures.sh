@@ -28,7 +28,7 @@ echo '{
 
 echo '{
     "is_root": true,
-    "name": "hallo%num%_%char%%ext%",
+    "name": "hallo_%num%_%char%%ext%",
     "exts": ["mkv"],
     "vars": {
         "%num%": {
@@ -36,7 +36,7 @@ echo '{
             "format": "N%02d"
         },
         "%char%": {
-            "type": "int",
+            "type": "str",
             "format": "C%s"
         }
     },

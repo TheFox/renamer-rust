@@ -20,7 +20,7 @@ impl App {
             paths: None,
             limit: None,
             dryrun: false,
-            verbose: 1,
+            verbose: 0,
         }
     }
 }
