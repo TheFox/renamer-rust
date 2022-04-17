@@ -118,9 +118,7 @@ fn main() -> IoResult<()> {
             "-v" => { app.verbose = 1; },
             "-vv" => { app.verbose = 2; },
             "-vvv" => { app.verbose = 3; },
-            _ => {
-                panic!("Unrecognized argument: {}", arg);
-            },
+            _ => panic!("Unrecognized argument: {}", arg),
         }
     }
 
@@ -139,12 +137,14 @@ fn main() -> IoResult<()> {
     let renamer = Renamer::new(config, app.limit, app.dryrun);
 
     let stats = renamer.rename(app.paths);
+    println!("---------------");
     println!("-> dirs:     {}", stats.dirs);
     println!("-> files:    {}", stats.files);
     println!("-> renamed:  {}", stats.renamed);
     println!("-> errors:   {}", stats.errors);
     println!("-> warnings: {}", stats.warnings);
     println!("-> rest:     {:?}", stats.rest);
+    println!("---------------");
 
     #[cfg(debug_assertions)]
     println!("-> end");

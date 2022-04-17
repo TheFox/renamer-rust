@@ -148,10 +148,11 @@ impl Var {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
-    #[serde(skip_deserializing)]
+    #[serde(skip)]
     is_initialized: bool,
 
-    root: Option<bool>,
+    #[serde(alias = "root")]
+    is_root: Option<bool>,
     errors: Option<bool>,
     name: Option<String>,
     exts: ExtsOption,
@@ -160,7 +161,7 @@ pub struct Config {
     #[serde(alias = "find")]
     finds: FindsOption,
 
-    #[serde(skip_deserializing)]
+    #[serde(skip)]
     regex_finds: RegexFindsOption,
 }
 
@@ -169,7 +170,7 @@ impl Config {
         // println!("{}-> Config::new(){}", BLUE, NO_COLOR);
         Self {
             is_initialized: false,
-            root: None,
+            is_root: None,
             errors: None,
             name: None,
             exts: None,
@@ -321,22 +322,17 @@ impl Config {
         let mut config = Config::new();
 
         // Root
-        if let Some(_root) = &other.root {
-            // println!("{}-> merge root: {:?}{}", BLUE, _root, NO_COLOR);
-            // config.root = Some(*_root);
-            panic!("not implemented: merge root field");
-        }
+        // if let Some(_is_root) = &other.is_root {
+        //     panic!("not implemented: merge root field");
+        // }
 
         // Errors
-        if let Some(_errors) = &other.errors {
-            // println!("{}-> merge errors: {:?}{}", BLUE, _errors, NO_COLOR);
-            // config.errors = Some(*_errors);
-            panic!("not implemented: merge errors field");
-        }
+        // if let Some(_errors) = &other.errors {
+        //     panic!("not implemented: merge errors field");
+        // }
 
         // Name
         if let Some(_name) = &other.name {
-            println!("{}-> merge name: {:?}{}", BLUE, _name, NO_COLOR);
             config.name = Some(_name.clone());
         }
 
@@ -350,8 +346,7 @@ impl Config {
         config.finds = self.merge_finds(&other);
         config.setup_regex_finds();
 
-        // println!("-> new config: {:?}", config);
-        // dbg!(&config);
+        config.is_initialized = true;
 
         config
     }
@@ -364,8 +359,8 @@ impl Config {
     }
 
     pub fn is_root(&self) -> bool {
-        match &self.root {
-            Some(root) => *root,
+        match &self.is_root {
+            Some(is_root) => *is_root,
             None => false,
         }
     }
@@ -484,14 +479,14 @@ mod tests_config {
 
         for _t in _data {
             let mut source_c1 = Config::new();
-            source_c1.root = Some(_t.0);
+            source_c1.is_root = Some(_t.0);
 
             let mut source_c2 = Config::new();
-            source_c2.root = Some(_t.1);
+            source_c2.is_root = Some(_t.1);
 
             let merged_c3 = source_c1.merge(&source_c2);
 
-            assert_eq!(_t.2, merged_c3.root.unwrap());
+            assert_eq!(_t.2, merged_c3.is_root.unwrap());
         }
     }
 

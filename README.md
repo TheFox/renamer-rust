@@ -25,8 +25,15 @@ See [config.json](config.json) example file.
 
 ### Fields
 
-#### root
+| Name | Alias | Type | Description |
+|---|---|---|---|
+| is_root | root | bool | If true, renamer will not go up the directory tree for the next config file (`.renamer.json` or `renamer.json`). |
+| errors | - | bool | Show errors. |
+| name | - | string | - |
+| exts | - | array | White-list for file extensions to consider for renaming. Ignore every other file. |
+| vars | - | object | - |
+| finds | - | object | - |
 
-Type: bool
+#### vars Field
 
-If true, renamer will not go up the directory tree for the next config file (`.renamer.json` or `renamer.json`).
+#### finds Field

@@ -43,36 +43,78 @@ fn read_local_config(path: &Path) -> ConfigOption {
     }
 }
 
-fn find_root_config(path: &Path, level: u64) -> ConfigOption {
-    println!("-> find_root_config({:?}, {})", path, level);
+fn find_root_path(path: &Path) -> &Path {
+    println!("{}-> find_root_path({:?}){}", RED, path, NO_COLOR);
 
-    match path.parent() {
-        Some(parent) => {
-            match read_local_config(&parent) {
-                Some(_config) => {
-                    if _config.is_root() {
-                        // println!("  -> found root config A: {:?} {}", path, level);
-                        Some(_config)
-                    } else {
-                        let config_o = find_root_config(&parent, level + 1);
-                        if config_o.is_some() {
-                            // println!("  -> found root config B: {:?} {}", path, level);
-                            config_o
-                        } else {
-                            // println!("  -> found root config C: {:?} {} -> {}", path, level, _config.name());
-                            Some(_config)
+    let mut paths: Vec<&Path> = vec![];
+
+    let mut ancestors = path.ancestors();
+    for _path in path.ancestors() {
+        if _path.display().to_string().len() > 0 {
+            paths.push(_path);
+        } else {
+            paths.push(&Path::new("."));
+        }
+    }
+
+    let mut current_path: &Path = &Path::new(".");
+
+    for _path in &paths {
+        println!("  {}-> path: {:?}{}", YELLOW, _path, NO_COLOR);
+
+        match read_local_config(&_path) {
+            Some(_config) => {
+                println!("    -> config: {:?} {:?} {:?}", _config.name(), _config.is_root(), _config.is_initialized());
+                current_path = _path;
+                if _config.is_root() {
+                    break;
+                }
+            },
+            None => {},
+        }
+    }
+
+    println!("-> current_path: {:?}", current_path);
+    current_path
+}
+
+fn find_root_config(path: &Path, level: u64) -> ConfigOption {
+    // println!("{}-> find_root_config({:?}, {}){}", RED, path, level, NO_COLOR);
+
+    match read_local_config(&path) {
+        Some(_config) => {
+            // Found at the given path, loaded to _config.
+
+            // println!("{}  -> config: {:?}{}", YELLOW, _config.name(), NO_COLOR);
+
+            if _config.is_root() {
+                // println!("{}  -> is root{}", YELLOW, NO_COLOR);
+                Some(_config)
+            } else {
+                // Found config is not the root, go up.
+                // println!("{}  -> no root{}", YELLOW, NO_COLOR);
+                match path.parent() {
+                    Some(parent) => {
+                        // println!("{}  -> found parent{}", YELLOW, NO_COLOR);
+
+                        match find_root_config(&parent, level + 1) {
+                            Some(_config) => Some(_config),
+                            None => Some(_config),
                         }
-                    }
-                },
-                None => {
-                    // println!("  -> found root config D: {:?} {}", path, level);
-                    find_root_config(&parent, level + 1)
-                },
+                    },
+                    None => {
+                        // println!("{}  -> no parent{}", YELLOW, NO_COLOR);
+                        Some(_config)
+                    },
+                }
             }
         },
         None => {
-            // println!("  -> found root config E: {:?} {}", path, level);
-            None
+            // There is no config at the given path, go up.
+            match path.parent() {
+                Some(parent) => find_root_config(&parent, level + 1),
+                None => None,
+            }
         },
     }
 }
@@ -94,11 +136,11 @@ fn merge_child_configs(path: &Path) -> Config {
 
     let mut merged_config = Config::new();
     for _path in paths {
-        println!("-> path: {:?}", _path);
+        // println!("-> path: {:?}", _path);
 
         match read_local_config(&_path) {
             Some(local_config) => {
-                println!("  -> merge config: {:?}", _path);
+                // println!("  -> merge config: {:?}", _path);
                 merged_config = merged_config.merge(&local_config);
             },
             None => {},
@@ -140,20 +182,20 @@ impl Renamer {
     }
 
     fn get_merged_config(&self, path: &Path) -> Config {
-        println!("-> Renamer::get_merged_config({:?})", path);
+        // println!("-> Renamer::get_merged_config({:?})", path);
 
         match read_local_config(path) {
             Some(_config) => {
                 if _config.is_root() {
-                    println!("{}    -> take local config{}", BLUE, NO_COLOR);
+                    // println!("{}    -> take local config{}", BLUE, NO_COLOR);
                     _config
                 } else {
-                    println!("{}    -> merge config{}", BLUE, NO_COLOR);
+                    // println!("{}    -> merge config{}", BLUE, NO_COLOR);
                     self.config.merge(&_config)
                 }
             },
             None => {
-                println!("{}    -> clone config: {:?}{}", BLUE, self.config.is_initialized(), NO_COLOR);
+                // println!("{}    -> clone config: {:?}{}", BLUE, self.config.is_initialized(), NO_COLOR);
                 self.config.clone()
             },
         }
@@ -176,23 +218,18 @@ impl Renamer {
                 'paths_loop: for _path in &_paths {
                     let _ppath = &String::from(_path);
                     let _ppath = Path::new(OsStr::new(_ppath));
-                    println!("{}-> path: {:?}{}", BLUE, _ppath, NO_COLOR);
+                    // println!("{}-> path: {:?}{}", BLUE, _ppath, NO_COLOR);
 
                     let mut merged_config: Config = self.get_merged_config(&_ppath);
                     if !merged_config.is_initialized() {
-                        println!("  -> config is not initialized");
+                        println!("  -> config is not initialized [A]");
 
-                        let root_config = find_root_config(&_ppath, 0);
-                        match root_config {
-                            Some(_root_config) => {
-                                println!("  -> root config is some: {:?}", _root_config.name());
-                                merged_config = merge_child_configs(&_ppath);
-                                dbg!(&merged_config);
-                            },
-                            None => {
-                                println!("  -> no root config");
-                                panic!("No config provided");
-                            },
+                        let root_path = find_root_path(&_ppath);
+                        merged_config = merge_child_configs(root_path);
+
+                        if !merged_config.is_initialized() {
+                            dbg!(merged_config);
+                            panic!("No config provided");
                         }
                     }
 
@@ -217,7 +254,7 @@ impl Renamer {
                             },
                         };
 
-                        println!("{}-> file: {:?} {:?}{}", GREEN, dir_entry, dir_entry.path().file_name(), NO_COLOR);
+                        println!("{}-> file: {:?}{}", GREEN, dir_entry.path().display(), NO_COLOR);
 
                         let file_name: String = match dir_entry.path().file_name() {
                             Some(_file_name) => {
@@ -315,6 +352,12 @@ impl Renamer {
                             let new_file_path = parent.join(name);
                             println!("-> new: {:?}", new_file_path);
 
+                            if new_file_path.exists() {
+                                println!("{}-> skip file, already exists: {}{}", YELLOW, new_file_path.display(), NO_COLOR);
+                                stats.warnings += 1;
+                                continue 'files_loop;
+                            }
+
                             if self.dryrun {
                                 println!("{}-> move (dry-run){}", GREEN, NO_COLOR);
                             }
@@ -326,7 +369,8 @@ impl Renamer {
 
                             if !self.dryrun {
                                 if cfg!(feature="production") {
-                                    // println!("{}   move{}", RED, NO_COLOR); rename(path, new_file_path);
+                                    println!("{}   move{}", RED, NO_COLOR);
+                                    rename(path, new_file_path);
                                 }
                                 stats += 1;
                             }
