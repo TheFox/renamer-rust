@@ -12,6 +12,7 @@ pub struct Stats {
     pub renamed: FileCount,
     pub errors: FileCount,
     pub warnings: FileCount,
+    pub skipped: FileCount,
 
     pub rest: Limit,
 }
@@ -28,6 +29,7 @@ impl Stats {
             renamed: 0,
             errors: 0,
             warnings: 0,
+            skipped: 0,
 
             rest: None,
         }
@@ -53,6 +55,7 @@ impl AddAssign for Stats {
         self.renamed += other.renamed;
         self.errors += other.errors;
         self.warnings += other.warnings;
+        self.skipped += other.skipped;
 
         if let Some(_rest) = &mut self.rest {
             if *_rest > 0 {

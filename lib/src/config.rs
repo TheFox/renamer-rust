@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 use regex::Regex;
 use lazy_static::lazy_static;
+use log::debug;
 
 use serde::Serialize;
 use serde::Deserialize;
@@ -154,7 +155,10 @@ pub struct Config {
 
     #[serde(alias = "root")]
     is_root: Option<bool>,
+
+    #[serde(skip)]
     errors: Option<bool>,
+
     name: Option<String>,
     exts: ExtsOption,
     vars: VarsOption,
@@ -210,6 +214,11 @@ impl Config {
 
         self.is_initialized = true;
         self.setup_regex_finds();
+
+        // match &self.name {
+        //     Some(name) => {},
+        //     None => panic!("Config doesn't have a name"),
+        // }
     }
 
     fn setup_regex_finds(&mut self) {
@@ -345,9 +354,9 @@ impl Config {
 
         // Finds
         config.finds = self.merge_finds(&other);
-        config.setup_regex_finds();
 
-        config.is_initialized = true;
+        // Setup
+        config.setup();
 
         config
     }
@@ -376,7 +385,10 @@ impl Config {
     pub fn name(&self) -> String {
         match &self.name {
             Some(name) => name.clone(),
-            None => panic!("Config doesn't have a name"),
+            None => {
+                dbg!(self); // TODO
+                panic!("Config doesn't have a name")
+            },
         }
     }
 

@@ -12,6 +12,7 @@ mkdir -p tmp/test2/test3
 mkdir -p tmp/test3/test4
 mkdir -p tmp/test4/test5/test6
 mkdir -p tmp/test5/test6/test7
+mkdir -p tmp/test6/.test7
 
 # Files
 touch tmp/test1/test1a.{txt,mkv}

@@ -26,6 +26,7 @@ TODO
 | `-c` or `--config` | Path to main config. |
 | `-p` or `--path` | Path to root directory. Multiple `-p`s possible. At least one `--path` has to be provided. Otherwise renamer will not to anything. |
 | `-l` or `--limit` | Limit the files to consider for renaming. |
+| `-d` or `--maxdepth` | Maximum directory depth to consider. |
 | `-n` or `--dryrun` | Do not change anything. Only print what would happen. |
 | `-v` or `--verbose` | Verbose Levels: 1,2,3 |
 | `-v` | Verbose Level 1 |
@@ -38,7 +39,7 @@ For example
 renamer --path /path/to/dir1
 renamer --path /path/to/dir1 --path /path/to/dir2
 
-renamer --config ./renamer.json --path /path/to/dir1 --path /path/to/dir2 --limit 10 --verbose 3 --dryrun
+renamer --config ./renamer.json --path /path/to/dir1 --path /path/to/dir2 --limit 10 --maxdepth 1 --verbose 3 --dryrun
 ```
 
 ## Config Data Structure
@@ -52,7 +53,7 @@ See [config.json](config.json) example file.
 | Name | Alias | Type | Description |
 |---|---|---|---|
 | is_root | root | bool | If true, renamer will not go up the directory tree for the next config file (`.renamer.json` or `renamer.json`). |
-| errors | - | bool | Show errors. |
+| errors (Not Implemented) | - | bool | Show errors. |
 | name | - | string | - |
 | exts | - | array | White-list for file extensions to consider for renaming. Ignore every other file. |
 | vars | - | object | - |

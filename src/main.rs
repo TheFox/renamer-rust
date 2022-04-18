@@ -104,6 +104,16 @@ fn main() -> IoResult<()> {
                     skip_next = true;
                 }
             },
+            "-d" | "--maxdepth" => {
+                if let Some(_next) = next {
+                    let md = _next.parse::<u16>().unwrap();
+                    if md <= 0 {
+                        panic!("Not sure what to do with max depth {}", md);
+                    }
+                    app.max_depth = Some(md);
+                    skip_next = true;
+                }
+            },
             "-n" | "--dryrun" => {
                 app.dryrun = true;
             },
@@ -137,6 +147,7 @@ fn main() -> IoResult<()> {
         println!("-> app.config: {:?}", app.config);
         println!("-> app.paths: {:?}", app.paths);
         println!("-> app.limit: {:?}", app.limit);
+        println!("-> app.max_depth: {:?}", app.max_depth);
         println!("-> app.dryrun: {:?}", app.dryrun);
         println!("-> app.verbose: {:?}", app.verbose);
     }
@@ -145,7 +156,8 @@ fn main() -> IoResult<()> {
     let config = Config::from_config_path(app.config);
 
     // Renamer
-    let renamer = Renamer::new(config, app.limit, app.dryrun, app.verbose);
+    let renamer = Renamer::new(config, app.limit, app.max_depth, app.dryrun, app.verbose);
+    // let renamer = Renamer::from_app(config, &app);
 
     let stats = renamer.rename(app.paths);
     if app.verbose >= 1 {
@@ -155,6 +167,7 @@ fn main() -> IoResult<()> {
         println!("-> renamed:  {}", stats.renamed);
         println!("-> errors:   {}", stats.errors);
         println!("-> warnings: {}", stats.warnings);
+        println!("-> skipped:  {}", stats.skipped);
         println!("-> rest:     {:?}", stats.rest);
         println!("---------------");
     }

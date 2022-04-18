@@ -11,11 +11,13 @@ use std::result::Result;
 use std::fs::FileType;
 use std::os::unix::fs::MetadataExt;
 use log::debug;
+// use std::convert::From;
 
 use crate::types::ConfigPath;
 use crate::types::Paths;
 use crate::types::Limit;
 use crate::types::FileCount;
+use crate::types::MaxDepth;
 use crate::colors::NO_COLOR;
 use crate::colors::RED;
 use crate::colors::BLUE;
@@ -24,6 +26,9 @@ use crate::colors::YELLOW;
 use crate::config::Config;
 use crate::config::ConfigOption;
 use crate::stats::Stats;
+
+// extern crate renamer_app;
+// use renamer_app::app::App;
 
 #[cfg(debug_assertions)]
 fn print_type_of<T>(_: &T) {
@@ -45,7 +50,7 @@ fn read_local_config(path: &Path) -> ConfigOption {
 }
 
 fn find_root_path(path: &Path) -> &Path {
-    println!("{}-> find_root_path({:?}){}", RED, path, NO_COLOR);
+    // println!("{}-> find_root_path({:?}){}", RED, path, NO_COLOR);
 
     let mut paths: Vec<&Path> = vec![];
 
@@ -61,11 +66,11 @@ fn find_root_path(path: &Path) -> &Path {
     let mut current_path: &Path = &Path::new(".");
 
     for _path in &paths {
-        println!("  {}-> path: {:?}{}", YELLOW, _path, NO_COLOR);
+        // println!("  {}-> path: {:?}{}", YELLOW, _path, NO_COLOR);
 
         match read_local_config(&_path) {
             Some(_config) => {
-                println!("    -> config: {:?} {:?} {:?}", _config.name(), _config.is_root(), _config.is_initialized());
+                // println!("    -> config: {:?} {:?} {:?}", _config.name(), _config.is_root(), _config.is_initialized());
                 current_path = _path;
                 if _config.is_root() {
                     break;
@@ -75,7 +80,7 @@ fn find_root_path(path: &Path) -> &Path {
         }
     }
 
-    println!("-> current_path: {:?}", current_path);
+    // println!("-> current_path: {:?}", current_path);
     current_path
 }
 
@@ -155,30 +160,60 @@ pub struct Renamer {
     limit: Limit,
     dryrun: bool,
     verbose: u8,
+    max_depth: MaxDepth,
     level: u64,
 }
 
+// impl From<App> for Renamer {
+//     fn from(app: App) -> Self {
+//         Self {
+//             config: Config,
+//             limit: Limit,
+//             dryrun: bool,
+//             verbose: u8,
+//             max_depth: MaxDepth,
+//             level: u64,
+//         }
+//     }
+// }
+
 impl Renamer {
-    pub fn new(config: Config, limit: Limit, dryrun: bool, verbose: u8) -> Self {
+    pub fn new(config: Config, limit: Limit, max_depth: MaxDepth, dryrun: bool, verbose: u8) -> Self {
         #[cfg(debug_assertions)]
-        println!("-> Renamer::new({:?}, {})", limit, dryrun);
+        println!("-> Renamer::new({:?}, {}, {}, {:?})", limit, dryrun, verbose, max_depth);
 
         Self {
             config: config,
             limit: limit,
+            max_depth: max_depth,
             dryrun: dryrun,
+            verbose: verbose,
             level: 0,
-            verbose: 0,
         }
     }
 
-    fn traverse(config: Config, limit: Limit, dryrun: bool, verbose: u8, level: u64) -> Self {
+    // pub fn from_app(config: Config, app: &App) -> Self {
+    //     #[cfg(debug_assertions)]
+    //     println!("-> Renamer::from_app()");
+
+    //     Self {
+    //         config: config,
+    //         limit: app.limit,
+    //         max_depth: app.max_depth,
+    //         dryrun: app.dryrun,
+    //         verbose: app.verbose,
+    //         level: 0,
+    //     }
+    // }
+
+    fn traverse(config: Config, limit: Limit, max_depth: MaxDepth, dryrun: bool, verbose: u8, level: u64) -> Self {
         #[cfg(debug_assertions)]
-        println!("-> Renamer::traverse({})", level);
+        println!("-> Renamer::traverse({}, {:?})", level, max_depth);
 
         Self {
             config: config,
             limit: limit,
+            max_depth: max_depth,
             dryrun: dryrun,
             verbose: verbose,
             level: level,
@@ -207,7 +242,7 @@ impl Renamer {
 
     pub fn rename(&self, paths: Paths) -> Stats {
         if cfg!(debug_assertions) {
-            println!("-> Renamer::rename(l={}, {:?})", self.level, paths);
+            println!("-> Renamer::rename(l={}, {:?}) [v={}]", self.level, paths, self.verbose);
         }
 
         let mut stats = Stats::new();
@@ -215,14 +250,15 @@ impl Renamer {
             stats.rest = Some(_limit);
         }
 
-        // println!("-> paths: {:?}", paths);
-
         match paths {
             Some(_paths) => {
                 'paths_loop: for _path in &_paths {
                     let _ppath = &String::from(_path);
                     let _ppath = Path::new(OsStr::new(_ppath));
-                    // println!("{}-> path: {:?}{}", BLUE, _ppath, NO_COLOR);
+
+                    if self.verbose >= 1 {
+                        println!("{}-> path: {:?}{}", BLUE, _ppath, NO_COLOR);
+                    }
 
                     let mut merged_config: Config = self.get_merged_config(&_ppath);
                     if !merged_config.is_initialized() {
@@ -241,14 +277,17 @@ impl Renamer {
 
                     if self.verbose >= 3 {
                         println!("--- config ---");
-                        debug!("{:?}", merged_config);
+                        // debug!("{:?}", &merged_config); // TODO
+                        dbg!(&merged_config); // TODO
+                        println!("--------------");
                     }
 
+                    // Get files as array.
                     let files: ReadDir = match read_dir(_ppath) {
                         Ok(_files) => _files,
                         Err(_error) => {
-                            if self.verbose >= 1 {
-                                println!("{}-> Read Dir ERROR: {}: {}{}", RED, _error.to_string(), _path, NO_COLOR);
+                            if self.verbose >= 2 {
+                                println!("{}-> Read Dir ERROR for {}: {}{}", RED, _ppath.display(), _error.to_string(), NO_COLOR);
                             }
                             stats.errors += 1;
                             continue 'paths_loop;
@@ -256,82 +295,128 @@ impl Renamer {
                     };
 
                     'files_loop: for _file in files {
-                        let dir_entry = match _file {
+                        // Dir Entry
+                        let dir_entry: DirEntry = match _file {
                             Ok(_entry) => _entry,
-                            Err(_error) => {
-                                println!("{}-> File ERROR: {}{}", RED, _error, NO_COLOR);
+                            Err(ref _error) => {
+                                if self.verbose >= 2 {
+                                    println!("{}-> File ERROR for {:?}: {}{}", RED, _file, _error.to_string(), NO_COLOR);
+                                }
                                 stats.errors += 1;
                                 continue 'files_loop;
                             },
                         };
 
-                        println!("{}-> file: {:?}{}", GREEN, dir_entry.path().display(), NO_COLOR);
+                        let path = dir_entry.path();
 
-                        let file_name: String = match dir_entry.path().file_name() {
+                        if self.verbose >= 2 {
+                            println!("{}-> entry: {:?}{}", GREEN, path.display(), NO_COLOR);
+                        }
+
+                        // File Name
+                        let file_name: String = match path.file_name() {
                             Some(_file_name) => {
                                 if _file_name == "renamer.json" || _file_name == ".renamer.json" {
-                                    println!("{}  -> skip, renamer config{}", BLUE, NO_COLOR);
+                                    //println!("{}-> skip, renamer config{}", BLUE, NO_COLOR);
+                                    stats.skipped += 1;
                                     continue 'files_loop;
                                 }
-                                _file_name.to_str().unwrap().into()
+
+                                let _fn: String = _file_name.to_str().unwrap().into();
+                                if _fn.as_bytes()[0] == 46 { // =='.'
+                                    if self.verbose >= 2 {
+                                        println!("{}-> skip, hidden entry{}", YELLOW, NO_COLOR);
+                                    }
+                                    stats.skipped += 1;
+                                    continue 'files_loop;
+                                }
+                                _fn
                             },
                             None => {
-                                println!("{}  -> skip, cannot extract file name from path{}", BLUE, NO_COLOR);
+                                if self.verbose >= 2 {
+                                    println!("{}-> skip, cannot extract file name from path: {:?}{}", RED, dir_entry, NO_COLOR);
+                                }
+                                stats.errors += 1;
                                 continue 'files_loop;
                             },
                         };
-
-                        // println!("-> file name: '{}'", file_name);
 
                         let entry_metadata = match dir_entry.metadata() {
                             Ok(_metadata) => _metadata,
                             Err(_error) => {
-                                println!("{}-> no metadata available for {:?}: {}{}", RED, dir_entry, _error, NO_COLOR);
+                                if self.verbose >= 2 {
+                                    println!("{}-> no metadata available for {:?}: {}{}", RED, dir_entry, _error, NO_COLOR);
+                                }
                                 stats.errors += 1;
                                 continue 'files_loop;
                             },
                         };
 
-                        // println!("  -> mode: {:02o}", entry_metadata.mode());
-
                         if entry_metadata.is_dir() {
-                            // println!("  -> is dir");
+                            if self.verbose >= 2 {
+                                println!("-> is dir");
+                            }
                             stats.dirs += 1;
 
-                            let _spaths = Some(vec![dir_entry.path().display().to_string()]);
+                            let max_depth: MaxDepth = match self.max_depth {
+                                Some(_md) => {
+                                    let md = _md - 1;
+                                    if md <= 0 {
+                                        if self.verbose >= 2 {
+                                            println!("{}-> skip directory, reached max depth{}", YELLOW, NO_COLOR);
+                                        }
+                                        // stats.skipped += 1; // wos moch ma do? keine Ahnung, Herr Kommissar.
+                                        continue 'files_loop;
+                                    }
+                                    Some(md)
+                                },
+                                None => None,
+                            };
 
-                            let _renamer = Self::traverse(merged_config.clone(), stats.rest, self.dryrun, self.verbose, self.level + 1);
+                            let _spaths = Some(vec![path.display().to_string()]);
+
+                            let _renamer = Self::traverse(merged_config.clone(), stats.rest, max_depth, self.dryrun, self.verbose, self.level + 1);
                             let _sstats = _renamer.rename(_spaths);
                             stats += _sstats;
                         } else if entry_metadata.is_file() {
-                            // println!("  -> is file");
+                            if self.verbose >= 2 {
+                                println!("-> is file");
+                            }
                             stats.files += 1;
 
-                            let ext: String = match dir_entry.path().extension() {
+                            if !merged_config.has_name() {
+                                if self.verbose >= 2 {
+                                    println!("-> skip, config has no name");
+                                }
+                                stats.skipped += 1;
+                                continue 'files_loop;
+                            }
+
+                            let ext: String = match path.extension() {
                                 Some(_ext) => _ext.to_str().unwrap().into(),
                                 None => {
                                     if self.verbose >= 1 {
-                                        println!("{}  -> skip, cannot extract extension from path{}", BLUE, NO_COLOR);
+                                        println!("{}-> skip, cannot extract extension from path: {}{}", RED, path.display(), NO_COLOR);
                                     }
+                                    stats.errors += 1;
                                     continue 'files_loop;
                                 },
                             };
 
                             if !merged_config.has_ext(&ext) {
-                                if self.verbose >= 1 {
-                                    println!("{}  -> skip, wrong ext: '{}'{}", BLUE, &ext, NO_COLOR);
+                                if self.verbose >= 2 {
+                                    println!("{}-> skip, wrong ext: '{}'{}", BLUE, &ext, NO_COLOR);
                                 }
+                                stats.skipped += 1;
                                 continue 'files_loop;
                             }
 
-                            // println!("  -> ext: '{}'", ext);
-
                             let mut name = merged_config.name();
-                            // println!("  -> name A: '{}'", name);
                             name = name.replace("%ext%", &(".".to_owned() + &ext));
-                            // println!("  -> name B: '{}'", name);
 
-                            // println!("  -> check regex");
+                            if self.verbose >= 2 {
+                                println!("-> check regex");
+                            }
                             'finds_loop: for (regex, vars) in merged_config.regex_finds() {
                                 // println!("  -> find: {:?}", regex);
                                 match regex.captures(&file_name) {
@@ -358,26 +443,24 @@ impl Renamer {
                                 }
                             }
 
-                            let path = dir_entry.path();
-                            // println!("-> path: {:?}", path.parent());
-
                             let parent = match path.parent() {
                                 Some(_parent) => _parent,
                                 None => panic!("Cannot get parent from path: {:?}", path),
                             };
 
-                            // println!("-> parent: {:?}", parent);
-
                             let new_file_path = parent.join(name);
-                            // println!("-> new: {:?}", new_file_path);
 
                             if new_file_path.exists() {
-                                println!("{}-> skip file, already exists: {}{}", YELLOW, new_file_path.display(), NO_COLOR);
+                                if self.verbose >= 2 {
+                                    println!("{}-> skip file, already exists: {}{}", YELLOW, new_file_path.display(), NO_COLOR);
+                                }
                                 stats.warnings += 1;
                                 continue 'files_loop;
                             }
                             if merged_config.path_has_var(&new_file_path) {
-                                println!("{}-> skip file, variables not replaced{}", YELLOW, NO_COLOR);
+                                if self.verbose >= 2 {
+                                    println!("{}-> skip file, variables not replaced{}", YELLOW, NO_COLOR);
+                                }
                                 stats.warnings += 1;
                                 continue 'files_loop;
                             }
