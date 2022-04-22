@@ -16,6 +16,7 @@ use serde_json::Value;
 
 use crate::types::ConfigPath;
 use crate::types::VerboseOption;
+use crate::verbose::Verbose;
 
 use crate::colors::NO_COLOR;
 use crate::colors::RED;
@@ -159,7 +160,10 @@ pub struct Config {
     #[serde(alias = "root")]
     is_root: Option<bool>,
 
-    verbose: VerboseOption,
+    verbose: Option<u8>,
+
+    #[serde(skip)]
+    verbose_v: Verbose,
 
     // Ignore this field. // TODO: remove?
     #[serde(skip)]
@@ -183,6 +187,7 @@ impl Config {
             is_initialized: false,
             is_root: None,
             verbose: None,
+            verbose_v: Verbose::new(),
             errors: None,
             name: None,
             exts: None,
@@ -221,7 +226,7 @@ impl Config {
 
         self.is_initialized = true;
         self.setup_regex_finds();
-        // self.check_vars();
+        self.setup_verbose();
     }
 
     fn setup_regex_finds(&mut self) {
@@ -242,13 +247,9 @@ impl Config {
         }
     }
 
-    // fn check_vars(&self) {
-    //     let finds = match &self.finds {
-    //         Some(_finds) => _finds,
-    //         None => return,
-    //     };
-    //     for (regex_s, vars_a) in _finds {}
-    // }
+    fn setup_verbose(&mut self) {
+        self.verbose_v = Verbose::from_option(self.verbose);
+    }
 
     fn merge_exts(&self, other: &Config) -> ExtsOption {
         if self.exts.is_some() && other.exts.is_some() {
@@ -348,7 +349,8 @@ impl Config {
 
         // Verbose
         if let Some(_verbose) = &other.verbose {
-            config.verbose = Some(*_verbose);
+            // config.verbose = _verbose;
+            panic!("not implemented: merge verbose field");
         }
 
         // Errors
@@ -388,14 +390,6 @@ impl Config {
             Some(is_root) => *is_root,
             None => false,
         }
-    }
-
-    pub fn verbose(&self, other: VerboseOption) -> VerboseOption {
-        // match &self.verbose {
-        //     Some(verbose) => *verbose,
-        //     None => 0,
-        // }
-        None
     }
 
     pub fn has_name(&self) -> bool {

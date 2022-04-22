@@ -4,6 +4,7 @@ use std::ops::AddAssign;
 use std::cmp::PartialOrd;
 use std::cmp::Ordering;
 
+#[derive(Debug)]
 pub struct Verbose {
     verbose: u8,
     is_init: bool,
@@ -17,10 +18,17 @@ impl Verbose {
         }
     }
 
-    pub fn from(verbose: u8) -> Self {
+    pub fn from_u8(verbose: u8) -> Self {
         Self {
             verbose: verbose,
             is_init: true,
+        }
+    }
+
+    pub fn from_option(o: Option<u8>) -> Self {
+        match o {
+            Some(_v) => Self::from_u8(_v),
+            None => Self::new(),
         }
     }
 }
@@ -43,24 +51,6 @@ impl Add for Verbose {
         }
     }
 }
-
-/*impl PartialOrd for Verbose {
-    fn lt(&self, other: &Verbose) -> bool {
-        false
-    }
-
-    fn le(&self, other: &Verbose) -> bool {
-        false
-    }
-
-    fn gt(&self, other: &Verbose) -> bool {
-        false
-    }
-
-    fn ge(&self, other: &Verbose) -> bool {
-        false
-    }
-}*/
 
 impl PartialEq<i32> for Verbose {
     fn eq(&self, other: &i32) -> bool {
@@ -115,7 +105,7 @@ mod tests_verbose {
         ];
 
         for (_v, _c, (_eq, _lt, _le, _gt, _ge)) in data {
-            let v1 = Verbose::from(_v);
+            let v1 = Verbose::from_u8(_v);
 
             assert_eq!(_eq, v1 == _c);
 

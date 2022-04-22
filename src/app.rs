@@ -4,7 +4,7 @@ use renamer_lib::types::ConfigPath;
 use renamer_lib::types::Paths;
 use renamer_lib::types::Limit;
 use renamer_lib::types::MaxDepth;
-use renamer_lib::types::VerboseOption;
+use renamer_lib::verbose::Verbose;
 
 #[derive(Debug)]
 pub struct App {
@@ -13,7 +13,7 @@ pub struct App {
     pub limit: Limit,
     pub max_depth: MaxDepth,
     pub dryrun: bool,
-    pub verbose: VerboseOption,
+    pub verbose: Verbose,
 }
 
 impl App {
@@ -24,7 +24,7 @@ impl App {
             limit: None,
             max_depth: None,
             dryrun: false,
-            verbose: None,
+            verbose: Verbose::new(),
         }
     }
 }
