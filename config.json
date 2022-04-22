@@ -1,6 +1,6 @@
 {
 	"root": true,
-    "errors": false,
+    "verbose": 3,
 	"name": "File.%sea%%epi%%ext%",
 	"exts": [
 		"mp4",

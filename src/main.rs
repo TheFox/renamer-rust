@@ -120,25 +120,25 @@ fn main() -> IoResult<()> {
             "--verbose" => {
                 if let Some(_next) = next {
                     if let ResResult::Ok(_next) = _next.parse::<u8>() {
-                        app.verbose = _next;
+                        app.verbose = Some(_next);
                     }
                     skip_next = true;
                 }
             },
             "-v" => {
-                app.verbose = 1;
+                app.verbose = Some(1);
 
                 if let Some(_next) = next {
                     // dbg!(&_next);
                     if let ResResult::Ok(_next) = _next.parse::<u8>() {
-                        app.verbose = _next;
+                        app.verbose = Some(_next);
                         skip_next = true;
                     }
                     // else { println!("-> failed to parse: '{}'", _next); }
                 }
             },
-            "-vv" => { app.verbose = 2; },
-            "-vvv" => { app.verbose = 3; },
+            "-vv" => { app.verbose = Some(2); },
+            "-vvv" => { app.verbose = Some(3); },
             _ => panic!("Unrecognized argument: {}", arg),
         }
     }
@@ -155,12 +155,23 @@ fn main() -> IoResult<()> {
     // Config
     let config = Config::from_config_path(app.config);
 
+    let verbose_u = match &app.verbose {
+        Some(_v) => *_v,
+        None => 0,
+    };
+
+    // let _cv = config.verbose();
+    // let _v = if app.verbose == _cv {
+    //     app.verbose
+    // } else {
+    //     _cv
+    // };
+
     // Renamer
     let renamer = Renamer::new(config, app.limit, app.max_depth, app.dryrun, app.verbose);
-    // let renamer = Renamer::from_app(config, &app);
 
     let stats = renamer.rename(app.paths);
-    if app.verbose >= 1 {
+    if verbose_u >= 1 {
         println!("---------------");
         println!("-> dirs:     {}", stats.dirs);
         println!("-> files:    {}", stats.files);

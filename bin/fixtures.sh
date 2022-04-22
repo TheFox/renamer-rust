@@ -13,6 +13,7 @@ mkdir -p tmp/test3/test4
 mkdir -p tmp/test4/test5/test6
 mkdir -p tmp/test5/test6/test7
 mkdir -p tmp/test6/.test7
+mkdir -p tmp/test7/test8
 
 # Files
 touch tmp/test1/test1a.{txt,mkv}
@@ -21,6 +22,8 @@ touch tmp/test2/test2b.{txt,mkv}
 touch tmp/test2/test3/test3a.{txt,mkv}
 touch tmp/test2/test3/test3b.{txt,mkv}
 touch tmp/test3/test4/test4.mkv
+touch tmp/test7/test_s1.mkv
+touch tmp/test7/test8/test_s1_e1.mkv
 
 # Configs
 echo '{
@@ -62,3 +65,27 @@ echo '{
     "name": "test5",
     "exts": ["avi"]
 }' > tmp/test4/test5/renamer.json
+
+echo '{
+    "is_root": true,
+    "verbose": 2,
+    "name": "test7.%sea%%epi%%ext%",
+    "exts": ["mkv"],
+    "vars": {
+        "%sea%": {
+			"type": "int",
+			"format": "S%02d"
+		},
+		"%epi%": {
+			"type": "int",
+			"format": "E%02d"
+		}
+    },
+	"finds": {
+		"(\\d{1,2}).(\\d{1,3})": ["%sea%", "%epi%"]
+	}
+}' > tmp/test7/.renamer.json
+
+echo '{
+    "verbose": 0
+}' > tmp/test7/test8/.renamer.json

@@ -18,13 +18,17 @@ use crate::types::Paths;
 use crate::types::Limit;
 use crate::types::FileCount;
 use crate::types::MaxDepth;
+use crate::types::VerboseOption;
+
 use crate::colors::NO_COLOR;
 use crate::colors::RED;
 use crate::colors::BLUE;
 use crate::colors::GREEN;
 use crate::colors::YELLOW;
+
 use crate::config::Config;
 use crate::config::ConfigOption;
+
 use crate::stats::Stats;
 
 // extern crate renamer_app;
@@ -159,54 +163,41 @@ pub struct Renamer {
     config: Config,
     limit: Limit,
     dryrun: bool,
-    verbose: u8,
+    verbose: VerboseOption,
     max_depth: MaxDepth,
     level: u64,
 }
 
-// impl From<App> for Renamer {
-//     fn from(app: App) -> Self {
-//         Self {
-//             config: Config,
-//             limit: Limit,
-//             dryrun: bool,
-//             verbose: u8,
-//             max_depth: MaxDepth,
-//             level: u64,
-//         }
-//     }
-// }
-
 impl Renamer {
-    pub fn new(config: Config, limit: Limit, max_depth: MaxDepth, dryrun: bool, verbose: u8) -> Self {
+    pub fn new(config: Config, limit: Limit, max_depth: MaxDepth, dryrun: bool, verbose: VerboseOption) -> Self {
         #[cfg(debug_assertions)]
-        println!("-> Renamer::new({:?}, {}, {}, {:?})", limit, dryrun, verbose, max_depth);
+        println!("-> Renamer::new({:?}, {}, {:?}, {:?})", limit, dryrun, verbose, max_depth);
+
+        // let _cv = config.verbose();
+        // let _v: Verbose = if verbose == _cv {
+        //     #[cfg(debug_assertions)]
+        //     println!("-> verbose is the same");
+        //     verbose
+        // } else {
+        //     #[cfg(debug_assertions)]
+        //     println!("-> take config verbose");
+        //     _cv
+        // };
+
+        // #[cfg(debug_assertions)]
+        // println!("-> verbose={}", _v);
 
         Self {
             config: config,
             limit: limit,
             max_depth: max_depth,
             dryrun: dryrun,
-            verbose: verbose,
+            verbose: None,
             level: 0,
         }
     }
 
-    // pub fn from_app(config: Config, app: &App) -> Self {
-    //     #[cfg(debug_assertions)]
-    //     println!("-> Renamer::from_app()");
-
-    //     Self {
-    //         config: config,
-    //         limit: app.limit,
-    //         max_depth: app.max_depth,
-    //         dryrun: app.dryrun,
-    //         verbose: app.verbose,
-    //         level: 0,
-    //     }
-    // }
-
-    fn traverse(config: Config, limit: Limit, max_depth: MaxDepth, dryrun: bool, verbose: u8, level: u64) -> Self {
+    fn traverse(config: Config, limit: Limit, max_depth: MaxDepth, dryrun: bool, verbose: VerboseOption, level: u64) -> Self {
         #[cfg(debug_assertions)]
         println!("-> Renamer::traverse({}, {:?})", level, max_depth);
 
@@ -242,7 +233,7 @@ impl Renamer {
 
     pub fn rename(&self, paths: Paths) -> Stats {
         if cfg!(debug_assertions) {
-            println!("-> Renamer::rename(l={}, {:?}) [v={}]", self.level, paths, self.verbose);
+            println!("-> Renamer::rename(l={}, {:?}) [v={:?}]", self.level, paths, self.verbose);
         }
 
         let mut stats = Stats::new();
@@ -250,13 +241,16 @@ impl Renamer {
             stats.rest = Some(_limit);
         }
 
+        // let mut verbose: Verbose = self.verbose;
+        let mut verbose = 0; // TODO
+
         match paths {
             Some(_paths) => {
                 'paths_loop: for _path in &_paths {
                     let _ppath = &String::from(_path);
                     let _ppath = Path::new(OsStr::new(_ppath));
 
-                    if self.verbose >= 1 {
+                    if verbose >= 1 {
                         println!("{}-> path: {:?}{}", BLUE, _ppath, NO_COLOR);
                     }
 
@@ -273,9 +267,14 @@ impl Renamer {
                         }
                     }
 
+                    // TODO
+                    // if verbose != merged_config.verbose() {
+                    //     verbose = merged_config.verbose();
+                    // }
+
                     //println!("{}  -> merged config: {:?}{}", YELLOW, merged_config.is_initialized(), NO_COLOR);
 
-                    if self.verbose >= 3 {
+                    if verbose >= 3 {
                         println!("--- config ---");
                         // debug!("{:?}", &merged_config); // TODO
                         dbg!(&merged_config); // TODO
@@ -286,7 +285,7 @@ impl Renamer {
                     let files: ReadDir = match read_dir(_ppath) {
                         Ok(_files) => _files,
                         Err(_error) => {
-                            if self.verbose >= 2 {
+                            if verbose >= 2 {
                                 println!("{}-> Read Dir ERROR for {}: {}{}", RED, _ppath.display(), _error.to_string(), NO_COLOR);
                             }
                             stats.errors += 1;
@@ -299,7 +298,7 @@ impl Renamer {
                         let dir_entry: DirEntry = match _file {
                             Ok(_entry) => _entry,
                             Err(ref _error) => {
-                                if self.verbose >= 2 {
+                                if verbose >= 2 {
                                     println!("{}-> File ERROR for {:?}: {}{}", RED, _file, _error.to_string(), NO_COLOR);
                                 }
                                 stats.errors += 1;
@@ -309,7 +308,7 @@ impl Renamer {
 
                         let path = dir_entry.path();
 
-                        if self.verbose >= 2 {
+                        if verbose >= 2 {
                             println!("{}-> entry: {:?}{}", GREEN, path.display(), NO_COLOR);
                         }
 
@@ -324,7 +323,7 @@ impl Renamer {
 
                                 let _fn: String = _file_name.to_str().unwrap().into();
                                 if _fn.as_bytes()[0] == 46 { // =='.'
-                                    if self.verbose >= 2 {
+                                    if verbose >= 2 {
                                         println!("{}-> skip, hidden entry{}", YELLOW, NO_COLOR);
                                     }
                                     stats.skipped += 1;
@@ -333,7 +332,7 @@ impl Renamer {
                                 _fn
                             },
                             None => {
-                                if self.verbose >= 2 {
+                                if verbose >= 2 {
                                     println!("{}-> skip, cannot extract file name from path: {:?}{}", RED, dir_entry, NO_COLOR);
                                 }
                                 stats.errors += 1;
@@ -344,7 +343,7 @@ impl Renamer {
                         let entry_metadata = match dir_entry.metadata() {
                             Ok(_metadata) => _metadata,
                             Err(_error) => {
-                                if self.verbose >= 2 {
+                                if verbose >= 2 {
                                     println!("{}-> no metadata available for {:?}: {}{}", RED, dir_entry, _error, NO_COLOR);
                                 }
                                 stats.errors += 1;
@@ -353,7 +352,7 @@ impl Renamer {
                         };
 
                         if entry_metadata.is_dir() {
-                            if self.verbose >= 2 {
+                            if verbose >= 2 {
                                 println!("-> is dir");
                             }
                             stats.dirs += 1;
@@ -362,7 +361,7 @@ impl Renamer {
                                 Some(_md) => {
                                     let md = _md - 1;
                                     if md <= 0 {
-                                        if self.verbose >= 2 {
+                                        if verbose >= 2 {
                                             println!("{}-> skip directory, reached max depth{}", YELLOW, NO_COLOR);
                                         }
                                         // stats.skipped += 1; // wos moch ma do? keine Ahnung, Herr Kommissar.
@@ -375,17 +374,18 @@ impl Renamer {
 
                             let _spaths = Some(vec![path.display().to_string()]);
 
-                            let _renamer = Self::traverse(merged_config.clone(), stats.rest, max_depth, self.dryrun, self.verbose, self.level + 1);
+                            // TODO: verbose
+                            let _renamer = Self::traverse(merged_config.clone(), stats.rest, max_depth, self.dryrun, Some(0), self.level + 1);
                             let _sstats = _renamer.rename(_spaths);
                             stats += _sstats;
                         } else if entry_metadata.is_file() {
-                            if self.verbose >= 2 {
+                            if verbose >= 2 {
                                 println!("-> is file");
                             }
                             stats.files += 1;
 
                             if !merged_config.has_name() {
-                                if self.verbose >= 2 {
+                                if verbose >= 2 {
                                     println!("-> skip, config has no name");
                                 }
                                 stats.skipped += 1;
@@ -395,7 +395,7 @@ impl Renamer {
                             let ext: String = match path.extension() {
                                 Some(_ext) => _ext.to_str().unwrap().into(),
                                 None => {
-                                    if self.verbose >= 1 {
+                                    if verbose >= 1 {
                                         println!("{}-> skip, cannot extract extension from path: {}{}", RED, path.display(), NO_COLOR);
                                     }
                                     stats.errors += 1;
@@ -404,7 +404,7 @@ impl Renamer {
                             };
 
                             if !merged_config.has_ext(&ext) {
-                                if self.verbose >= 2 {
+                                if verbose >= 2 {
                                     println!("{}-> skip, wrong ext: '{}'{}", BLUE, &ext, NO_COLOR);
                                 }
                                 stats.skipped += 1;
@@ -414,7 +414,7 @@ impl Renamer {
                             let mut name = merged_config.name();
                             name = name.replace("%ext%", &(".".to_owned() + &ext));
 
-                            if self.verbose >= 2 {
+                            if verbose >= 2 {
                                 println!("-> check regex");
                             }
                             'finds_loop: for (regex, vars) in merged_config.regex_finds() {
@@ -424,12 +424,12 @@ impl Renamer {
                                         // println!("-> caps: {:?}", caps);
 
                                         let mut i = 1;
-                                        for var in vars {
-                                            let value = merged_config.format_var(var.clone(), caps[i].to_string());
-                                            name = name.replace(&var, &value);
-
-                                            // println!("  -> var: #{} {:?} => {} '{}'", i, var, &caps[i], value);
-                                            // println!("  -> name C: '{}'", name);
+                                        for var_name in vars {
+                                            if !merged_config.has_var(&var_name) {
+                                                panic!("Variable not defined: {}", var_name);
+                                            }
+                                            let value = merged_config.format_var(&var_name, caps[i].to_string());
+                                            name = name.replace(&var_name, &value);
 
                                             i += 1;
                                         }
@@ -451,21 +451,21 @@ impl Renamer {
                             let new_file_path = parent.join(name);
 
                             if new_file_path.exists() {
-                                if self.verbose >= 2 {
+                                if verbose >= 2 {
                                     println!("{}-> skip file, already exists: {}{}", YELLOW, new_file_path.display(), NO_COLOR);
                                 }
                                 stats.warnings += 1;
                                 continue 'files_loop;
                             }
                             if merged_config.path_has_var(&new_file_path) {
-                                if self.verbose >= 2 {
+                                if verbose >= 2 {
                                     println!("{}-> skip file, variables not replaced{}", YELLOW, NO_COLOR);
                                 }
                                 stats.warnings += 1;
                                 continue 'files_loop;
                             }
 
-                            if self.verbose >= 1 {
+                            if verbose >= 1 {
                                 if self.dryrun {
                                     println!("{}-> move (dry-run){}", GREEN, NO_COLOR);
                                 }
@@ -486,7 +486,7 @@ impl Renamer {
                         } // entry_metadata.is_file()
 
                         if stats.end() {
-                            if self.verbose >= 1 {
+                            if verbose >= 1 {
                                 println!("{}-> abort, reached limit{}", BLUE, NO_COLOR);
                             }
                             break 'paths_loop;

@@ -4,6 +4,7 @@ use std::fs::read_to_string;
 use std::path::Path;
 use std::path::PathBuf;
 use std::collections::HashMap;
+use std::cmp::Ordering;
 use regex::Regex;
 use lazy_static::lazy_static;
 use log::debug;
@@ -14,6 +15,8 @@ use serde_json::from_str;
 use serde_json::Value;
 
 use crate::types::ConfigPath;
+use crate::types::VerboseOption;
+
 use crate::colors::NO_COLOR;
 use crate::colors::RED;
 use crate::colors::BLUE;
@@ -156,6 +159,9 @@ pub struct Config {
     #[serde(alias = "root")]
     is_root: Option<bool>,
 
+    verbose: VerboseOption,
+
+    // Ignore this field. // TODO: remove?
     #[serde(skip)]
     errors: Option<bool>,
 
@@ -176,6 +182,7 @@ impl Config {
         Self {
             is_initialized: false,
             is_root: None,
+            verbose: None,
             errors: None,
             name: None,
             exts: None,
@@ -214,18 +221,13 @@ impl Config {
 
         self.is_initialized = true;
         self.setup_regex_finds();
-
-        // match &self.name {
-        //     Some(name) => {},
-        //     None => panic!("Config doesn't have a name"),
-        // }
+        // self.check_vars();
     }
 
     fn setup_regex_finds(&mut self) {
         if let Some(_finds) = &self.finds {
             let mut regex_finds = RegexFinds::new();
             for (regex_s, vars_a) in _finds {
-
                 match Regex::new(regex_s) {
                     Result::Ok(_r) => {
                         let find = (_r, vars_a.clone());
@@ -239,6 +241,14 @@ impl Config {
             self.regex_finds = Some(regex_finds);
         }
     }
+
+    // fn check_vars(&self) {
+    //     let finds = match &self.finds {
+    //         Some(_finds) => _finds,
+    //         None => return,
+    //     };
+    //     for (regex_s, vars_a) in _finds {}
+    // }
 
     fn merge_exts(&self, other: &Config) -> ExtsOption {
         if self.exts.is_some() && other.exts.is_some() {
@@ -336,6 +346,11 @@ impl Config {
         //     panic!("not implemented: merge root field");
         // }
 
+        // Verbose
+        if let Some(_verbose) = &other.verbose {
+            config.verbose = Some(*_verbose);
+        }
+
         // Errors
         // if let Some(_errors) = &other.errors {
         //     panic!("not implemented: merge errors field");
@@ -375,6 +390,14 @@ impl Config {
         }
     }
 
+    pub fn verbose(&self, other: VerboseOption) -> VerboseOption {
+        // match &self.verbose {
+        //     Some(verbose) => *verbose,
+        //     None => 0,
+        // }
+        None
+    }
+
     pub fn has_name(&self) -> bool {
         match &self.name {
             Some(name) => name.len() > 0,
@@ -396,21 +419,19 @@ impl Config {
         match &self.regex_finds {
             Some(_x) => _x.to_vec(),
             None => {
-                // let _x = vec![];
-                // &_x
                 RegexFinds::new()
             },
         }
     }
 
-    pub fn format_var(&self, name: String, value: String) -> String {
+    pub fn format_var(&self, name: &String, value: String) -> String {
         match &self.vars {
             Some(_vars) => {
-                match &_vars.get(&name) {
+                match &_vars.get(name) {
                     Some(_var) => {
                         _var.format(value)
                     },
-                    None => panic!("Cariable not found: {}", name),
+                    None => panic!("Variable not found: {}", name),
                 }
             },
             None => panic!("No variables defined in Config"),
@@ -443,7 +464,18 @@ impl Config {
 
         false
     }
+
+    pub fn has_var(&self, name: &String) -> bool {
+        match &self.vars {
+            Some(_vars) => {
+                _vars.contains_key(name)
+            },
+            None => false,
+        }
+    }
 }
+
+// impl PartialOrd for Config {}
 
 #[cfg(test)]
 mod tests_vec {
@@ -747,5 +779,17 @@ mod tests_config {
         let mut source_c2 = source_c1.clone();
         assert_eq!(1, source_c2.finds.as_ref().unwrap().len());
         assert_eq!(1, source_c2.regex_finds.as_ref().unwrap().len());
+    }
+
+    #[test]
+    fn test_config_has_var(){
+        let data: String = r#"{"vars":{"%var1%":{"type":"int"}}}"#.into();
+        let mut source_c1 = Config::from_str(&data);
+
+        let _v1: String = "%var1%".into();
+        assert!(source_c1.has_var(&_v1));
+
+        let _v2: String = "%var2%".into();
+        assert!(!source_c1.has_var(&_v2));
     }
 }

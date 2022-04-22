@@ -79,3 +79,55 @@ impl AddAssign<FileCount> for Stats {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests_stats {
+    use super::Stats;
+
+    #[test]
+    fn test_stats1() {
+        let mut s1 = Stats::new();
+        s1.dirs += 1;
+        s1 += 1;
+
+        assert_eq!(1, s1.dirs);
+        assert_eq!(1, s1.renamed);
+    }
+
+    #[test]
+    fn test_stats2() {
+        let mut s1 = Stats::new();
+        s1.dirs += 1;
+        s1 += 2;
+
+        let mut s2 = Stats::new();
+        s2.dirs += 2;
+        s2 += 1;
+        s2 += 1;
+        s2 += s1;
+
+        assert_eq!(3, s2.dirs);
+        assert_eq!(4, s2.renamed);
+    }
+
+    #[test]
+    fn test_stats3() {
+        let mut s1 = Stats::new();
+        s1.rest = Some(10);
+        assert_eq!(10, s1.rest.unwrap());
+        assert!(!s1.end());
+
+        s1 += 2;
+        assert_eq!(8, s1.rest.unwrap());
+        assert!(!s1.end());
+
+        s1 += 8;
+        assert_eq!(0, s1.rest.unwrap());
+        assert!(s1.end());
+
+        s1 += 2;
+        assert_eq!(0, s1.rest.unwrap());
+        assert!(s1.end());
+    }
+}
