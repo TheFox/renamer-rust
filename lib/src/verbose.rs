@@ -1,6 +1,8 @@
 
 use std::ops::Add;
 use std::ops::AddAssign;
+use std::cmp::PartialOrd;
+use std::cmp::Ordering;
 
 pub struct Verbose {
     verbose: u8,
@@ -14,10 +16,18 @@ impl Verbose {
             is_init: false,
         }
     }
+
+    pub fn from(verbose: u8) -> Self {
+        Self {
+            verbose: verbose,
+            is_init: true,
+        }
+    }
 }
 
 impl Add for Verbose {
     type Output = Self;
+
     fn add(self, other: Self) -> Self::Output {
         if self.is_init && other.is_init {
             Self {
@@ -34,6 +44,52 @@ impl Add for Verbose {
     }
 }
 
+/*impl PartialOrd for Verbose {
+    fn lt(&self, other: &Verbose) -> bool {
+        false
+    }
+
+    fn le(&self, other: &Verbose) -> bool {
+        false
+    }
+
+    fn gt(&self, other: &Verbose) -> bool {
+        false
+    }
+
+    fn ge(&self, other: &Verbose) -> bool {
+        false
+    }
+}*/
+
+impl PartialEq<i32> for Verbose {
+    fn eq(&self, other: &i32) -> bool {
+        self.verbose == *other as u8
+    }
+}
+
+impl PartialOrd<i32> for Verbose {
+    fn partial_cmp(&self, other: &i32) -> Option<Ordering> {
+        self.verbose.partial_cmp(&(*other as u8))
+    }
+
+    fn lt(&self, other: &i32) -> bool {
+        self.verbose < *other as u8
+    }
+
+    fn le(&self, other: &i32) -> bool {
+        self.verbose <= *other as u8
+    }
+
+    fn gt(&self, other: &i32) -> bool {
+        self.verbose > *other as u8
+    }
+
+    fn ge(&self, other: &i32) -> bool {
+        self.verbose >= *other as u8
+    }
+}
+
 #[cfg(test)]
 mod tests_verbose {
     use super::Verbose;
@@ -44,6 +100,31 @@ mod tests_verbose {
 
         assert_eq!(0, v1.verbose);
         assert_eq!(false, v1.is_init);
+    }
+
+    type EqRes = (bool, bool, bool, bool, bool);
+    type EqData = (u8, i32, EqRes);
+
+    #[test]
+    fn test_verbose_eq() {
+        let data: Vec<EqData> = vec![
+            (1, 1, (true, false, true, false, true)),
+            (1, 2, (false, true, true, false, false)),
+            (2, 2, (true, false, true, false, true)),
+            (5, 2, (false, false, false, true, true)),
+        ];
+
+        for (_v, _c, (_eq, _lt, _le, _gt, _ge)) in data {
+            let v1 = Verbose::from(_v);
+
+            assert_eq!(_eq, v1 == _c);
+
+            assert_eq!(_lt, v1 < _c);
+            assert_eq!(_le, v1 <= _c);
+
+            assert_eq!(_gt, v1 > _c);
+            assert_eq!(_ge, v1 >= _c);
+        }
     }
 
     type SingleVerbose = (u8, bool);
