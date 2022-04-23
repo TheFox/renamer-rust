@@ -4,7 +4,7 @@ use std::ops::AddAssign;
 use std::cmp::PartialOrd;
 use std::cmp::Ordering;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Verbose {
     verbose: u8,
     is_init: bool,
@@ -31,12 +31,26 @@ impl Verbose {
             None => Self::new(),
         }
     }
+
+    pub fn set(&mut self, v: u8) {
+        self.verbose = v;
+        self.is_init = true;
+    }
+
+    pub fn get(&self) -> u8 {
+        self.verbose
+    }
+
+    pub fn is_init(&self) -> bool {
+        self.is_init
+    }
 }
 
 impl Add for Verbose {
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
+        //println!("->");
         if self.is_init && other.is_init {
             Self {
                 verbose: other.verbose,

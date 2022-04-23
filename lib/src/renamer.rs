@@ -18,7 +18,7 @@ use crate::types::Paths;
 use crate::types::Limit;
 use crate::types::FileCount;
 use crate::types::MaxDepth;
-use crate::types::VerboseOption;
+// use crate::types::VerboseOption;
 
 use crate::colors::NO_COLOR;
 use crate::colors::RED;
@@ -30,6 +30,7 @@ use crate::config::Config;
 use crate::config::ConfigOption;
 
 use crate::stats::Stats;
+use crate::verbose::Verbose;
 
 // extern crate renamer_app;
 // use renamer_app::app::App;
@@ -163,41 +164,27 @@ pub struct Renamer {
     config: Config,
     limit: Limit,
     dryrun: bool,
-    verbose: VerboseOption,
+    verbose: Verbose,
     max_depth: MaxDepth,
     level: u64,
 }
 
 impl Renamer {
-    pub fn new(config: Config, limit: Limit, max_depth: MaxDepth, dryrun: bool, verbose: VerboseOption) -> Self {
+    pub fn new(config: Config, limit: Limit, max_depth: MaxDepth, dryrun: bool, verbose: Verbose) -> Self {
         #[cfg(debug_assertions)]
         println!("-> Renamer::new({:?}, {}, {:?}, {:?})", limit, dryrun, verbose, max_depth);
-
-        // let _cv = config.verbose();
-        // let _v: Verbose = if verbose == _cv {
-        //     #[cfg(debug_assertions)]
-        //     println!("-> verbose is the same");
-        //     verbose
-        // } else {
-        //     #[cfg(debug_assertions)]
-        //     println!("-> take config verbose");
-        //     _cv
-        // };
-
-        // #[cfg(debug_assertions)]
-        // println!("-> verbose={}", _v);
 
         Self {
             config: config,
             limit: limit,
             max_depth: max_depth,
             dryrun: dryrun,
-            verbose: None,
+            verbose: verbose,
             level: 0,
         }
     }
 
-    fn traverse(config: Config, limit: Limit, max_depth: MaxDepth, dryrun: bool, verbose: VerboseOption, level: u64) -> Self {
+    fn traverse(config: Config, limit: Limit, max_depth: MaxDepth, dryrun: bool, verbose: Verbose, level: u64) -> Self {
         #[cfg(debug_assertions)]
         println!("-> Renamer::traverse({}, {:?})", level, max_depth);
 
@@ -375,7 +362,7 @@ impl Renamer {
                             let _spaths = Some(vec![path.display().to_string()]);
 
                             // TODO: verbose
-                            let _renamer = Self::traverse(merged_config.clone(), stats.rest, max_depth, self.dryrun, Some(0), self.level + 1);
+                            let _renamer = Self::traverse(merged_config.clone(), stats.rest, max_depth, self.dryrun, self.verbose, self.level + 1);
                             let _sstats = _renamer.rename(_spaths);
                             stats += _sstats;
                         } else if entry_metadata.is_file() {

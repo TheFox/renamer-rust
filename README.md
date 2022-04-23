@@ -15,6 +15,7 @@ TODO
 
 ```bash
 ./bin/dev.sh -c ./config.json -p tmp/test2 -l 1 -n
+./bin/dev.sh -p tmp/test2
 ```
 
 ## Arguments

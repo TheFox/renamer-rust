@@ -121,23 +121,23 @@ fn main() -> IoResult<()> {
             "--verbose" => {
                 if let Some(_next) = next {
                     if let ResResult::Ok(_next) = _next.parse::<u8>() {
-                        // app.verbose = _next;
+                        app.verbose.set(_next);
                     }
                     skip_next = true;
                 }
             },
             "-v" => {
-                // app.verbose = Some(1);
+                app.verbose.set(1);
 
                 if let Some(_next) = next {
                     if let ResResult::Ok(_next) = _next.parse::<u8>() {
-                        // app.verbose = Some(_next);
+                        app.verbose.set(_next);
                         skip_next = true;
                     }
                 }
             },
-            // "-vv" => { app.verbose = Some(2); },
-            // "-vvv" => { app.verbose = Some(3); },
+            "-vv" => { app.verbose.set(2); },
+            "-vvv" => { app.verbose.set(3); },
             _ => panic!("Unrecognized argument: {}", arg),
         }
     }

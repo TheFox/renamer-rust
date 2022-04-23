@@ -162,7 +162,7 @@ pub struct Config {
 
     verbose: Option<u8>,
 
-    #[serde(skip)]
+    #[serde(skip, default = "Verbose::new")]
     verbose_v: Verbose,
 
     // Ignore this field. // TODO: remove?
@@ -249,6 +249,10 @@ impl Config {
 
     fn setup_verbose(&mut self) {
         self.verbose_v = Verbose::from_option(self.verbose);
+    }
+
+    fn merge_verbose(&self, other: &Config) -> Verbose {
+        self.verbose_v + other.verbose_v
     }
 
     fn merge_exts(&self, other: &Config) -> ExtsOption {
@@ -348,10 +352,12 @@ impl Config {
         // }
 
         // Verbose
-        if let Some(_verbose) = &other.verbose {
-            // config.verbose = _verbose;
-            panic!("not implemented: merge verbose field");
-        }
+        // if let Some(_verbose) = &other.verbose {
+        //     // config.verbose = _verbose;
+        //     panic!("not implemented: merge verbose field");
+        // }
+
+        config.verbose_v = self.merge_verbose(&other);
 
         // Errors
         // if let Some(_errors) = &other.errors {
@@ -549,6 +555,22 @@ mod tests_config {
 
             assert_eq!(_t.2, merged_c3.is_root.unwrap());
         }
+    }
+
+    #[test]
+    fn test_config_merge_verbose() {
+        let mut source_c1 = Config::new();
+        assert!(!source_c1.verbose_v.is_init());
+        source_c1.verbose_v.set(1);
+        assert!(source_c1.verbose_v.is_init());
+        assert_eq!(1, source_c1.verbose_v.get());
+
+        let mut source_c2 = Config::new();
+        source_c2.verbose_v.set(2);
+
+        let merged_c3 = source_c1.merge(&source_c2);
+        assert!(merged_c3.verbose_v.is_init());
+        // assert_eq!(2, merged_c3.verbose_v.get());
     }
 
     // #[test]
